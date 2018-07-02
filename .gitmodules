@@ -1,0 +1,15 @@
+[submodule "third/nemo-rocksdb"]
+	path = third/nemo-rocksdb
+	url = https://github.com/Qihoo360/nemo-rocksdb.git
+[submodule "third/blackwidow"]
+	path = third/blackwidow
+	url = https://github.com/Axlgrep/blackwidow.git
+[submodule "third/nemo"]
+	path = third/nemo
+	url = https://github.com/Qihoo360/nemo.git
+[submodule "third/rocksdb"]
+	path = third/rocksdb
+	url = https://github.com/facebook/rocksdb.git
+[submodule "third/pink"]
+	path = third/pink
+	url = https://github.com/PikaLabs/pink.git
