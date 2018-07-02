@@ -1,0 +1,8 @@
+#ctags
+tags
+
+#Compiled Object files
+*.o
+
+#Nemo to Blackwidow Binary file
+nemo_to_blackwidow/nemo_to_blackwidow
