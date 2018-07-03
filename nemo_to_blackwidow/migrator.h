@@ -13,15 +13,25 @@
 
 class Migrator: public pink::Thread {
   public:
-    Migrator(blackwidow::BlackWidow* blackwidow_db)
-        : blackwidow_db_(blackwidow_db) {}
+    Migrator(nemo::Nemo* nemo_db, blackwidow::BlackWidow* blackwidow_db)
+        : nemo_db_(nemo_db),
+          blackwidow_db_(blackwidow_db),
+          should_exit_(false),
+          keys_queue_cond_(&keys_queue_mutex_) {}
     virtual ~Migrator() {}
+
+    void SetShouldExit();
+    void LoadKey(const std::string& key);
 
   private:
     virtual void *ThreadMain();
+    nemo::Nemo* nemo_db_;
     blackwidow::BlackWidow* blackwidow_db_;
 
-    std::queue<std::string> queue_;
+    std::atomic<bool> should_exit_;
+    slash::Mutex keys_queue_mutex_;
+    slash::CondVar keys_queue_cond_;
+    std::queue<std::string> keys_queue_;
 };
 
 #endif  //  INCLUDE_MIGRATOR_H_

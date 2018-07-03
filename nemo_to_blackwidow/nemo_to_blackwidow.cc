@@ -67,14 +67,34 @@ int main(int argc, char **argv) {
   }
 
   for (int32_t idx = 0; idx < thread_num; ++idx) {
-    migrators.push_back(new Migrator(blackwidow_db));
+    migrators.push_back(new Migrator(nemo_db, blackwidow_db));
   }
 
-  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::kKV_DB));
-  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::kHASH_DB));
-  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::kLIST_DB));
-  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::kSET_DB));
-  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::kZSET_DB));
+  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::KV_DB));
+  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::HASH_DB));
+  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::LIST_DB));
+  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::SET_DB));
+  classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::ZSET_DB));
+
+  for (int32_t idx = 0; idx < thread_num; ++idx) {
+    migrators[idx]->StartThread();
+  }
+
+  for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
+    classify_threads[idx]->StartThread();
+  }
+
+  for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
+    classify_threads[idx]->JoinThread();
+  }
+
+  for (int32_t idx = 0; idx < thread_num; ++idx) {
+    migrators[idx]->SetShouldExit();
+  }
+
+  for (int32_t idx = 0; idx < thread_num; ++idx) {
+    migrators[idx]->JoinThread();
+  }
 
   delete nemo_db;
   delete blackwidow_db;

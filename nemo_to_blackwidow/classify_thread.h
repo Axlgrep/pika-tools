@@ -16,14 +16,17 @@
 
 class ClassifyThread : public pink::Thread {
   public:
-    ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const nemo::DBType& type)
-        : nemo_db_(nemo_db), migrators_(migrators), type_(type) {
+    ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type)
+        : consume_index_(0), nemo_db_(nemo_db), migrators_(migrators), type_(type) {
     }
     virtual ~ClassifyThread() {};
   private:
+    void DispatchKey(const std::string& key);
     virtual void *ThreadMain();
+
+    int64_t consume_index_;
     nemo::Nemo* nemo_db_;
-    nemo::DBType type_;
+    std::string type_;
     std::vector<Migrator*> migrators_;
 };
 
