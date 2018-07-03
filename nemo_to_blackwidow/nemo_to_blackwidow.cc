@@ -1,3 +1,6 @@
+#include "chrono"
+#include "ctime"
+#include "iomanip"
 #include "iostream"
 
 #include "nemo.h"
@@ -6,19 +9,20 @@
 #include "migrator.h"
 #include "classify_thread.h"
 
+int32_t thread_num;
 std::string nemo_db_path;
 std::string blackwidow_db_path;
-int32_t thread_num;
 
 std::vector<Migrator*> migrators;
 std::vector<ClassifyThread*> classify_threads;
 
-void PrintConf() {
-  std::cout << "nemo_db_path : " << nemo_db_path << std::endl;
-  std::cout << "blackwidow_db_path : " << blackwidow_db_path << std::endl;
-  std::cout << "thread_num : " << thread_num << std::endl;
-  std::cout << "====================================" << std::endl;
-
+void PrintInfo(const std::time_t& now) {
+  std::cout << "================== Nemo To Blackwidow ==================" << std::endl;
+  std::cout << "Thread_num : " << thread_num << std::endl;
+  std::cout << "Nemo_db_path : " << nemo_db_path << std::endl;
+  std::cout << "Blackwidow_db_path : " << blackwidow_db_path << std::endl;
+  std::cout << "Startup Time : " << asctime(localtime(&now));
+  std::cout << "========================================================" << std::endl;
 }
 
 void Usage() {
@@ -36,7 +40,10 @@ int main(int argc, char **argv) {
   nemo_db_path = std::string(argv[1]);
   blackwidow_db_path = std::string(argv[2]);
   thread_num = atoi(argv[4]);
-  PrintConf();
+
+  std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
+  std::time_t now = std::chrono::system_clock::to_time_t(start_time);
+  PrintInfo(now);
 
   // Init nemo db
   nemo::Options nemo_option;
@@ -66,6 +73,7 @@ int main(int argc, char **argv) {
     return -1;
   }
 
+
   for (int32_t idx = 0; idx < thread_num; ++idx) {
     migrators.push_back(new Migrator(nemo_db, blackwidow_db));
   }
@@ -76,6 +84,7 @@ int main(int argc, char **argv) {
   classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::SET_DB));
   classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::ZSET_DB));
 
+  std::cout << "Start migrating data from Nemo to Blackwidow..." << std::endl;
   for (int32_t idx = 0; idx < thread_num; ++idx) {
     migrators[idx]->StartThread();
   }
@@ -95,6 +104,22 @@ int main(int argc, char **argv) {
   for (int32_t idx = 0; idx < thread_num; ++idx) {
     migrators[idx]->JoinThread();
   }
+
+  std::chrono::system_clock::time_point end_time = std::chrono::system_clock::now();
+  now = std::chrono::system_clock::to_time_t(end_time);
+  std::cout << "Finish Time : " << asctime(localtime(&now));
+
+  auto hours = std::chrono::duration_cast<std::chrono::hours>(end_time - start_time).count();
+  auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end_time - start_time).count();
+  auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
+  std::cout << "Total Time Cost : "
+            << hours << " hours "
+            << minutes - 60 * hours << " minutes "
+            << seconds - hours * 60 * 60 - minutes * 60 << " seconds "
+            << milliseconds - hours * 60 * 60 * 1000 - minutes * 60 * 1000 - seconds * 1000  << " milliseconds"
+            << std::endl;
 
   delete nemo_db;
   delete blackwidow_db;

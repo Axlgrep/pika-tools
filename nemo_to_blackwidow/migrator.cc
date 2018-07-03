@@ -81,7 +81,6 @@ void* Migrator::ThreadMain() {
       nemo::ZIterator *iter = nemo_db_->ZScan(key, nemo::ZSET_SCORE_MIN,
               nemo::ZSET_SCORE_MAX, -1, false);
       while (iter->Valid()) {
-        std::cout << iter->key() << " " << iter->score() << " " << iter->member() << std::endl;
         blackwidow_db_->ZAdd(iter->key(), {{iter->score(), iter->member()}}, &int32_ret);
         iter->Next();
       }

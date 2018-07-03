@@ -4,10 +4,10 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 
 #include "nemo.h"
-
 #include "classify_thread.h"
 
 void ClassifyThread::DispatchKey(const std::string& key) {
+  key_num_++;
   migrators_[consume_index_]->LoadKey(key);
   consume_index_ = (consume_index_ + 1) % migrators_.size();
 }
@@ -48,5 +48,6 @@ void* ClassifyThread::ThreadMain() {
       DispatchKey(key);
     }
   }
+  std::cout << "Classify " << type_ << " keys finish, keys num : " << key_num_ << std::endl;
   return NULL;
 }
