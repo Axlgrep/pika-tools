@@ -50,6 +50,7 @@ LIBS         = -lnemo                           \
                -lsnappy                         \
                -lz                              \
                -lbz2                            \
+               -lglog                           \
 
 SOURCE := $(wildcard $(TOP_PATH)/*.cc)
 OBJS := $(patsubst %.cc, %.o, $(SOURCE))

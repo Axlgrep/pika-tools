@@ -6,8 +6,11 @@
 #include "nemo.h"
 #include "classify_thread.h"
 
-void ClassifyThread::DispatchKey(const std::string& key) {
+void ClassifyThread::PlusProcessKeyNum() {
   key_num_++;
+}
+
+void ClassifyThread::DispatchKey(const std::string& key) {
   migrators_[consume_index_]->LoadKey(key);
   consume_index_ = (consume_index_ + 1) % migrators_.size();
 }
@@ -19,6 +22,7 @@ void* ClassifyThread::ThreadMain() {
     while (iter->Valid()) {
       key = iter->key();
       iter->Next();
+      PlusProcessKeyNum();
       DispatchKey(nemo::DataType::kKv + key);
     }
   } else {
@@ -45,9 +49,10 @@ void* ClassifyThread::ThreadMain() {
     while (iter->Valid() && iter->key().starts_with(key_start)) {
       key = iter->key().ToString();
       iter->Next();
+      PlusProcessKeyNum();
       DispatchKey(key);
     }
   }
-  std::cout << "Classify " << type_ << " keys finish, keys num : " << key_num_ << std::endl;
+  LOG(INFO) << "Classify " << type_ << " keys finish, keys num : " << key_num_;
   return NULL;
 }

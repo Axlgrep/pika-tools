@@ -6,6 +6,8 @@
 #ifndef INCLUDE_MIGRATOR_H_
 #define INCLUDE_MIGRATOR_H_
 
+#define MAX_QUEUE_SIZE 100000
+#include <glog/logging.h>
 #include "iostream"
 
 #include "blackwidow/blackwidow.h"
@@ -13,13 +15,18 @@
 
 class Migrator: public pink::Thread {
   public:
-    Migrator(nemo::Nemo* nemo_db, blackwidow::BlackWidow* blackwidow_db)
+    Migrator(int32_t migrator_id, nemo::Nemo* nemo_db, blackwidow::BlackWidow* blackwidow_db)
         : nemo_db_(nemo_db),
           blackwidow_db_(blackwidow_db),
+          migrator_id_(migrator_id),
+          migrate_key_num_(0),
           should_exit_(false),
-          keys_queue_cond_(&keys_queue_mutex_) {}
+          write_keys_queue_cond_(&keys_queue_mutex_),
+          read_keys_queue_cond_(&keys_queue_mutex_) {}
     virtual ~Migrator() {}
 
+    int32_t queue_size();
+    void PlusMigrateKey();
     void SetShouldExit();
     void LoadKey(const std::string& key);
 
@@ -28,9 +35,12 @@ class Migrator: public pink::Thread {
     nemo::Nemo* nemo_db_;
     blackwidow::BlackWidow* blackwidow_db_;
 
+    int32_t migrator_id_;
+    int64_t migrate_key_num_;
     std::atomic<bool> should_exit_;
     slash::Mutex keys_queue_mutex_;
-    slash::CondVar keys_queue_cond_;
+    slash::CondVar write_keys_queue_cond_;
+    slash::CondVar read_keys_queue_cond_;
     std::queue<std::string> keys_queue_;
 };
 

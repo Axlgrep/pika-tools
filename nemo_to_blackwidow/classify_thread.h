@@ -9,6 +9,8 @@
 #include "iostream"
 #include "vector"
 
+#include <glog/logging.h>
+
 #include "nemo.h"
 #include "pink/include/pink_thread.h"
 
@@ -22,6 +24,7 @@ class ClassifyThread : public pink::Thread {
     virtual ~ClassifyThread() {};
     int64_t key_num() { return key_num_;}
   private:
+    void PlusProcessKeyNum();
     void DispatchKey(const std::string& key);
     virtual void *ThreadMain();
 

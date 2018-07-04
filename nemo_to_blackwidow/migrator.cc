@@ -6,17 +6,29 @@
 #include "nemo.h"
 #include "migrator.h"
 
+int32_t Migrator::queue_size() {
+  slash::MutexLock l(&keys_queue_mutex_);
+  return keys_queue_.size();
+}
+
+void Migrator::PlusMigrateKey() {
+  migrate_key_num_++;
+}
+
 void Migrator::SetShouldExit() {
   keys_queue_mutex_.Lock();
   should_exit_ = true;
-  keys_queue_cond_.Signal();
+  read_keys_queue_cond_.Signal();
   keys_queue_mutex_.Unlock();
 }
 
 void Migrator::LoadKey(const std::string& key) {
   keys_queue_mutex_.Lock();
+  while (keys_queue_.size() > MAX_QUEUE_SIZE) {
+    write_keys_queue_cond_.Wait();
+  }
   keys_queue_.push(key);
-  keys_queue_cond_.Signal();
+  read_keys_queue_cond_.Signal();
   keys_queue_mutex_.Unlock();
 }
 
@@ -31,19 +43,22 @@ void* Migrator::ThreadMain() {
 
     keys_queue_mutex_.Lock();
     while (keys_queue_.empty() && !should_exit_) {
-      keys_queue_cond_.Wait();
+      read_keys_queue_cond_.Wait();
     }
     keys_queue_mutex_.Unlock();
 
-    keys_queue_mutex_.Lock();
-    if (keys_queue_.size() == 0 && should_exit_) {
-      keys_queue_mutex_.Unlock();
+
+    if (queue_size() == 0 && should_exit_) {
       return NULL;
     }
+
+    keys_queue_mutex_.Lock();
     key = keys_queue_.front();
     keys_queue_.pop();
+    write_keys_queue_cond_.Signal();
     keys_queue_mutex_.Unlock();
 
+    LOG(INFO) << "migrator id: " << migrator_id_ << ",  queue size: " << queue_size() << ", key: " << key;
 
     prefix = key[0];
     key = key.substr(1);
@@ -97,6 +112,8 @@ void* Migrator::ThreadMain() {
       std::cout << "wrong type of db type in migrator, exit..." << std::endl;
       exit(-1);
     }
+    PlusMigrateKey();
   }
+  LOG(INFO) << "Migrator " << migrator_id_ << " finish, keys num : " << migrate_key_num_ << " exit...";
   return NULL;
 }

@@ -3,7 +3,10 @@
 #include "iomanip"
 #include "iostream"
 
+#include <glog/logging.h>
+
 #include "nemo.h"
+#include "slash/include/env.h"
 #include "blackwidow/blackwidow.h"
 
 #include "migrator.h"
@@ -30,12 +33,23 @@ void Usage() {
   std::cout << "      ./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num]\n";
   std::cout << "      example: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10\n";
 }
+static void GlogInit() {
+  if (!slash::FileExists("./log")) {
+    slash::CreatePath("./log");
+  }
+
+  FLAGS_log_dir = "./log";
+  FLAGS_max_log_size = 2048;   // log file 2GB
+  ::google::InitGoogleLogging("nemo_to_blackwidow");
+}
 
 int main(int argc, char **argv) {
   if (argc != 5) {
     Usage();
     return -1;
   }
+
+  GlogInit();
 
   nemo_db_path = std::string(argv[1]);
   blackwidow_db_path = std::string(argv[2]);
@@ -75,7 +89,7 @@ int main(int argc, char **argv) {
 
 
   for (int32_t idx = 0; idx < thread_num; ++idx) {
-    migrators.push_back(new Migrator(nemo_db, blackwidow_db));
+    migrators.push_back(new Migrator(idx, nemo_db, blackwidow_db));
   }
 
   classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::KV_DB));
@@ -95,6 +109,7 @@ int main(int argc, char **argv) {
 
   for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
     classify_threads[idx]->JoinThread();
+    delete classify_threads[idx];
   }
 
   for (int32_t idx = 0; idx < thread_num; ++idx) {
@@ -103,6 +118,7 @@ int main(int argc, char **argv) {
 
   for (int32_t idx = 0; idx < thread_num; ++idx) {
     migrators[idx]->JoinThread();
+    delete migrators[idx];
   }
 
   std::chrono::system_clock::time_point end_time = std::chrono::system_clock::now();
