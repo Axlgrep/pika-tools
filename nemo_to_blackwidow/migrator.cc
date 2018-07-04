@@ -37,6 +37,7 @@ void* Migrator::ThreadMain() {
   int32_t int32_ret;
   uint64_t uint64_ret;
   rocksdb::Status s;
+  std::map<blackwidow::DataType, rocksdb::Status> type_status;
   while (keys_queue_.size() || !should_exit_) {
     char prefix;
     std::string key;
@@ -112,8 +113,15 @@ void* Migrator::ThreadMain() {
       std::cout << "wrong type of db type in migrator, exit..." << std::endl;
       exit(-1);
     }
+
+    int64_t ttl = -1;
+    nemo_db_->TTL(key, &ttl);
+    if (ttl > 0) {
+      int64_t timestamp = time(NULL) + ttl;
+      blackwidow_db_->Expireat(key, timestamp, &type_status);
+    }
     PlusMigrateKey();
   }
-  LOG(INFO) << "Migrator " << migrator_id_ << " finish, keys num : " << migrate_key_num_ << " exit...";
+  std::cout << "Migrator " << migrator_id_ << " finish, keys num : " << migrate_key_num_ << " exit..." << std::endl;
   return NULL;
 }

@@ -11,6 +11,13 @@ void ClassifyThread::PlusProcessKeyNum() {
 }
 
 void ClassifyThread::DispatchKey(const std::string& key) {
+  for (int32_t idx = 0; idx < migrators_.size(); ++idx) {
+    if (migrators_[(consume_index_ + idx) % migrators_.size()]->queue_size() < MAX_QUEUE_SIZE) {
+      consume_index_ = (consume_index_ + idx) % migrators_.size();
+      break;
+    }
+  }
+
   migrators_[consume_index_]->LoadKey(key);
   consume_index_ = (consume_index_ + 1) % migrators_.size();
 }
@@ -53,6 +60,6 @@ void* ClassifyThread::ThreadMain() {
       DispatchKey(key);
     }
   }
-  LOG(INFO) << "Classify " << type_ << " keys finish, keys num : " << key_num_;
+  std::cout << "Classify " << type_ << " keys finish, keys num : " << key_num_ << std::endl;
   return NULL;
 }

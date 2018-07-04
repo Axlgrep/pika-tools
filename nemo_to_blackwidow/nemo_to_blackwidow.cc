@@ -128,13 +128,11 @@ int main(int argc, char **argv) {
   auto hours = std::chrono::duration_cast<std::chrono::hours>(end_time - start_time).count();
   auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end_time - start_time).count();
   auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
-  auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 
   std::cout << "Total Time Cost : "
             << hours << " hours "
-            << minutes - 60 * hours << " minutes "
+            << minutes - hours * 60 << " minutes "
             << seconds - hours * 60 * 60 - minutes * 60 << " seconds "
-            << milliseconds - hours * 60 * 60 * 1000 - minutes * 60 * 1000 - seconds * 1000  << " milliseconds"
             << std::endl;
 
   delete nemo_db;
