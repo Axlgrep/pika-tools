@@ -22,14 +22,17 @@ void Migrator::SetShouldExit() {
   keys_queue_mutex_.Unlock();
 }
 
-void Migrator::LoadKey(const std::string& key) {
+bool Migrator::LoadKey(const std::string& key) {
   keys_queue_mutex_.Lock();
-  while (keys_queue_.size() > MAX_QUEUE_SIZE) {
-    write_keys_queue_cond_.Wait();
+  if (keys_queue_.size() >= MAX_QUEUE_SIZE) {
+    keys_queue_mutex_.Unlock();
+    return false;
+  } else {
+    keys_queue_.push(key);
+    read_keys_queue_cond_.Signal();
+    keys_queue_mutex_.Unlock();
+    return true;
   }
-  keys_queue_.push(key);
-  read_keys_queue_cond_.Signal();
-  keys_queue_mutex_.Unlock();
 }
 
 void* Migrator::ThreadMain() {

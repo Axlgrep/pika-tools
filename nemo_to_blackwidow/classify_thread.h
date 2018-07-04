@@ -19,15 +19,19 @@
 class ClassifyThread : public pink::Thread {
   public:
     ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type)
-        : key_num_(0), consume_index_(0), nemo_db_(nemo_db), migrators_(migrators), type_(type) {
+        : is_finish_(false), key_num_(0), consume_index_(0), nemo_db_(nemo_db), migrators_(migrators), type_(type) {
     }
     virtual ~ClassifyThread() {};
+    bool is_finish() { return is_finish_;}
+    std::string type() { return type_;}
     int64_t key_num() { return key_num_;}
+    int64_t consume_index() { return consume_index_;}
   private:
     void PlusProcessKeyNum();
     void DispatchKey(const std::string& key);
     virtual void *ThreadMain();
 
+    bool is_finish_;
     int64_t key_num_;
     int64_t consume_index_;
     nemo::Nemo* nemo_db_;

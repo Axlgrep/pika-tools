@@ -28,7 +28,7 @@ class Migrator: public pink::Thread {
     int32_t queue_size();
     void PlusMigrateKey();
     void SetShouldExit();
-    void LoadKey(const std::string& key);
+    bool LoadKey(const std::string& key);
 
   private:
     virtual void *ThreadMain();
