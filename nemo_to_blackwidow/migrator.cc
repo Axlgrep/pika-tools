@@ -4,11 +4,12 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 
 #include "nemo.h"
+#include "utils.h"
 #include "migrator.h"
 
 int32_t Migrator::queue_size() {
-  slash::MutexLock l(&keys_queue_mutex_);
-  return keys_queue_.size();
+  slash::MutexLock l(&queue_mutex_);
+  return items_queue_.size();
 }
 
 void Migrator::PlusMigrateKey() {
@@ -16,62 +17,64 @@ void Migrator::PlusMigrateKey() {
 }
 
 void Migrator::SetShouldExit() {
-  keys_queue_mutex_.Lock();
+  queue_mutex_.Lock();
   should_exit_ = true;
-  read_keys_queue_cond_.Signal();
-  keys_queue_mutex_.Unlock();
+  queue_cond_.Signal();
+  queue_mutex_.Unlock();
 }
 
-bool Migrator::LoadKey(const std::string& key) {
-  keys_queue_mutex_.Lock();
-  if (keys_queue_.size() >= MAX_QUEUE_SIZE) {
-    keys_queue_mutex_.Unlock();
+bool Migrator::LoadItem(const std::string& item) {
+  queue_mutex_.Lock();
+  if (items_queue_.size() >= MAX_QUEUE_SIZE) {
+    queue_mutex_.Unlock();
     return false;
   } else {
-    keys_queue_.push(key);
-    read_keys_queue_cond_.Signal();
-    keys_queue_mutex_.Unlock();
+    items_queue_.push(item);
+    queue_cond_.Signal();
+    queue_mutex_.Unlock();
     return true;
   }
 }
 
 void* Migrator::ThreadMain() {
 
+  char prefix;
   int32_t int32_ret;
   uint64_t uint64_ret;
+  std::string item, dst, key, value;
   rocksdb::Status s;
   std::map<blackwidow::DataType, rocksdb::Status> type_status;
-  while (keys_queue_.size() || !should_exit_) {
-    char prefix;
-    std::string key;
+  while (items_queue_.size() || !should_exit_) {
 
-    keys_queue_mutex_.Lock();
-    while (keys_queue_.empty() && !should_exit_) {
-      read_keys_queue_cond_.Wait();
+    queue_mutex_.Lock();
+    while (items_queue_.empty() && !should_exit_) {
+      queue_cond_.Wait();
     }
-    keys_queue_mutex_.Unlock();
+    queue_mutex_.Unlock();
 
 
     if (queue_size() == 0 && should_exit_) {
       return NULL;
     }
 
-    keys_queue_mutex_.Lock();
-    key = keys_queue_.front();
-    keys_queue_.pop();
-    write_keys_queue_cond_.Signal();
-    keys_queue_mutex_.Unlock();
+    queue_mutex_.Lock();
+    item = items_queue_.front();
+    items_queue_.pop();
+    queue_mutex_.Unlock();
 
-    LOG(INFO) << "migrator id: " << migrator_id_ << ",  queue size: " << queue_size() << ", key: " << key;
 
-    prefix = key[0];
-    key = key.substr(1);
+    prefix = item[0];
     if (prefix == nemo::DataType::kKv) {
-      std::string value;
-      s = nemo_db_->Get(key, &value);
-      if (s.ok()) {
-        blackwidow_db_->Set(key, value);
-      }
+      dst = item.substr(1);
+      DecodeKeyValue(dst, &key, &value);
+    } else {
+      key = item.substr(1);
+    }
+
+    LOG(INFO) << "migrator id: " << migrator_id_ << "  queue size: " << queue_size() << "  type : " << prefix << "  key: " << key;
+
+    if (prefix == nemo::DataType::kKv) {
+      blackwidow_db_->Set(key, value);
     } else if (prefix == nemo::DataType::kHSize) {
       nemo::HIterator *iter = nemo_db_->HScan(key, "", "", -1, false);
       while (iter->Valid()) {

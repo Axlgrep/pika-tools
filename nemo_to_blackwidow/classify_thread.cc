@@ -4,27 +4,30 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 
 #include "nemo.h"
+
+#include "utils.h"
 #include "classify_thread.h"
 
 void ClassifyThread::PlusProcessKeyNum() {
   key_num_++;
 }
 
-void ClassifyThread::DispatchKey(const std::string& key) {
+void ClassifyThread::DispatchItem(const std::string& item) {
   do {
     consume_index_ = (consume_index_ + 1) % migrators_.size();
-  } while (!migrators_[consume_index_]->LoadKey(key));
+  } while (!migrators_[consume_index_]->LoadItem(item));
 }
 
 void* ClassifyThread::ThreadMain() {
   std::string key;
+  std::string dst;
   if (type_ == nemo::KV_DB) {
     nemo::KIterator* iter = nemo_db_->KScan("", "", -1, false);
     while (iter->Valid()) {
-      key = iter->key();
-      iter->Next();
+      EncodeKeyValue(iter->key(), iter->value(), &dst);
+      DispatchItem(nemo::DataType::kKv + dst);
       PlusProcessKeyNum();
-      DispatchKey(nemo::DataType::kKv + key);
+      iter->Next();
     }
   } else {
     char c_type;
@@ -51,7 +54,7 @@ void* ClassifyThread::ThreadMain() {
       key = iter->key().ToString();
       iter->Next();
       PlusProcessKeyNum();
-      DispatchKey(key);
+      DispatchItem(key);
     }
   }
   is_finish_ = true;

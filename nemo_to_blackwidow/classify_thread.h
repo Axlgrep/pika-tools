@@ -28,7 +28,7 @@ class ClassifyThread : public pink::Thread {
     int64_t consume_index() { return consume_index_;}
   private:
     void PlusProcessKeyNum();
-    void DispatchKey(const std::string& key);
+    void DispatchItem(const std::string& item);
     virtual void *ThreadMain();
 
     bool is_finish_;

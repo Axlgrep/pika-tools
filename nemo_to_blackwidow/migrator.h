@@ -7,6 +7,8 @@
 #define INCLUDE_MIGRATOR_H_
 
 #define MAX_QUEUE_SIZE 100000
+#define MAX_BATCH_LIMIT 256
+
 #include <glog/logging.h>
 #include "iostream"
 
@@ -21,14 +23,13 @@ class Migrator: public pink::Thread {
           migrator_id_(migrator_id),
           migrate_key_num_(0),
           should_exit_(false),
-          write_keys_queue_cond_(&keys_queue_mutex_),
-          read_keys_queue_cond_(&keys_queue_mutex_) {}
+          queue_cond_(&queue_mutex_) {}
     virtual ~Migrator() {}
 
     int32_t queue_size();
     void PlusMigrateKey();
     void SetShouldExit();
-    bool LoadKey(const std::string& key);
+    bool LoadItem(const std::string& item);
 
   private:
     virtual void *ThreadMain();
@@ -38,10 +39,9 @@ class Migrator: public pink::Thread {
     int32_t migrator_id_;
     int64_t migrate_key_num_;
     std::atomic<bool> should_exit_;
-    slash::Mutex keys_queue_mutex_;
-    slash::CondVar write_keys_queue_cond_;
-    slash::CondVar read_keys_queue_cond_;
-    std::queue<std::string> keys_queue_;
+    slash::Mutex queue_mutex_;
+    slash::CondVar queue_cond_;
+    std::queue<std::string> items_queue_;
 };
 
 #endif  //  INCLUDE_MIGRATOR_H_
