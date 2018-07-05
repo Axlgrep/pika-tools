@@ -42,6 +42,7 @@ void* Migrator::ThreadMain() {
   int32_t int32_ret;
   uint64_t uint64_ret;
   std::string item, dst, key, value;
+
   rocksdb::Status s;
   std::map<blackwidow::DataType, rocksdb::Status> type_status;
   while (items_queue_.size() || !should_exit_) {
@@ -52,7 +53,6 @@ void* Migrator::ThreadMain() {
     }
     queue_mutex_.Unlock();
 
-
     if (queue_size() == 0 && should_exit_) {
       return NULL;
     }
@@ -61,7 +61,6 @@ void* Migrator::ThreadMain() {
     item = items_queue_.front();
     items_queue_.pop();
     queue_mutex_.Unlock();
-
 
     prefix = item[0];
     if (prefix == nemo::DataType::kKv) {
@@ -76,45 +75,63 @@ void* Migrator::ThreadMain() {
     if (prefix == nemo::DataType::kKv) {
       blackwidow_db_->Set(key, value);
     } else if (prefix == nemo::DataType::kHSize) {
+      std::vector<blackwidow::FieldValue> field_values;
       nemo::HIterator *iter = nemo_db_->HScan(key, "", "", -1, false);
       while (iter->Valid()) {
-        blackwidow_db_->HSet(iter->key(), iter->field(), iter->value(), &int32_ret);
-        iter->Next();
+        field_values.clear();
+        for (int32_t idx = 0;
+             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx++, iter->Next()) {
+          field_values.push_back({iter->field(), iter->value()});
+        }
+        blackwidow_db_->HMSet(iter->key(), field_values);
       }
       delete iter;
     } else if (prefix == nemo::DataType::kLMeta) {
       std::vector<nemo::IV> ivs;
       std::vector<std::string> values;
       int64_t pos = 0;
-      int64_t step_length = 500;
-      nemo_db_->LRange(key, 0, pos + step_length - 1, ivs);
+      nemo_db_->LRange(key, 0, pos + MAX_BATCH_LIMIT - 1, ivs);
       while (!ivs.empty()) {
         for (const auto& node : ivs) {
           values.push_back(node.val);
         }
         blackwidow_db_->RPush(key, values, &uint64_ret);
 
-        pos += step_length;
+        pos += MAX_BATCH_LIMIT;
         ivs.clear();
         values.clear();
-        nemo_db_->LRange(key, pos, pos + step_length - 1, ivs);
+        nemo_db_->LRange(key, pos, pos + MAX_BATCH_LIMIT - 1, ivs);
       }
     } else if (prefix == nemo::DataType::kZSize) {
+      std::vector<blackwidow::ScoreMember> score_members;
       nemo::ZIterator *iter = nemo_db_->ZScan(key, nemo::ZSET_SCORE_MIN,
               nemo::ZSET_SCORE_MAX, -1, false);
       while (iter->Valid()) {
-        blackwidow_db_->ZAdd(iter->key(), {{iter->score(), iter->member()}}, &int32_ret);
-        iter->Next();
+        score_members.clear();
+        for (int32_t idx = 0;
+             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx++, iter->Next()) {
+          score_members.push_back({iter->score(), iter->member()});
+        }
+        blackwidow_db_->ZAdd(iter->key(), score_members, &int32_ret);
       }
       delete iter;
 
     } else if (prefix == nemo::DataType::kSSize) {
+      std::vector<std::string> members;
       nemo::SIterator *iter = nemo_db_->SScan(key, -1, false);
       while (iter->Valid()) {
-        blackwidow_db_->SAdd(iter->key(), {iter->member()}, &int32_ret);
-        iter->Next();
+        members.clear();
+        for (int32_t idx = 0;
+             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx++, iter->Next()) {
+          members.push_back(iter->member());
+        }
+        blackwidow_db_->SAdd(iter->key(), members, &int32_ret);
       }
       delete iter;
+
     } else {
       std::cout << "wrong type of db type in migrator, exit..." << std::endl;
       exit(-1);

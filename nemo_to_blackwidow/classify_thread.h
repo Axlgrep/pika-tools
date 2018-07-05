@@ -12,6 +12,7 @@
 #include <glog/logging.h>
 
 #include "nemo.h"
+#include "utils.h"
 #include "pink/include/pink_thread.h"
 
 #include "migrator.h"

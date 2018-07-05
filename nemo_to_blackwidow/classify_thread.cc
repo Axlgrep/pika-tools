@@ -3,10 +3,8 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 
-#include "nemo.h"
-
-#include "utils.h"
 #include "classify_thread.h"
+
 
 void ClassifyThread::PlusProcessKeyNum() {
   key_num_++;

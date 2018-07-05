@@ -33,6 +33,7 @@ void Usage() {
   std::cout << "      ./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num]\n";
   std::cout << "      example: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10\n";
 }
+
 static void GlogInit() {
   if (!slash::FileExists("./log")) {
     slash::CreatePath("./log");
