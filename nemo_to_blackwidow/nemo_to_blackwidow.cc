@@ -22,6 +22,7 @@ std::vector<ClassifyThread*> classify_threads;
 void PrintInfo(const std::time_t& now) {
   std::cout << "================== Nemo To Blackwidow ==================" << std::endl;
   std::cout << "Thread_num : " << thread_num << std::endl;
+  std::cout << "Max batch limit : " << MAX_BATCH_LIMIT << std::endl;
   std::cout << "Nemo_db_path : " << nemo_db_path << std::endl;
   std::cout << "Blackwidow_db_path : " << blackwidow_db_path << std::endl;
   std::cout << "Startup Time : " << asctime(localtime(&now));
@@ -122,6 +123,9 @@ int main(int argc, char **argv) {
     delete migrators[idx];
   }
 
+  delete nemo_db;
+  delete blackwidow_db;
+
   std::chrono::system_clock::time_point end_time = std::chrono::system_clock::now();
   now = std::chrono::system_clock::to_time_t(end_time);
   std::cout << "Finish Time : " << asctime(localtime(&now));
@@ -135,8 +139,5 @@ int main(int argc, char **argv) {
             << minutes - hours * 60 << " minutes "
             << seconds - hours * 60 * 60 - minutes * 60 << " seconds "
             << std::endl;
-
-  delete nemo_db;
-  delete blackwidow_db;
   return 0;
 }

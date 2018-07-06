@@ -7,7 +7,7 @@
 #define INCLUDE_MIGRATOR_H_
 
 #define MAX_QUEUE_SIZE 100000
-#define MAX_BATCH_LIMIT 256
+#define MAX_BATCH_LIMIT 512
 
 #include <glog/logging.h>
 #include "iostream"
