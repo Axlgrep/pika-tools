@@ -5,7 +5,6 @@
 
 #include "classify_thread.h"
 
-
 void ClassifyThread::PlusProcessKeyNum() {
   key_num_++;
 }
@@ -56,6 +55,7 @@ void* ClassifyThread::ThreadMain() {
     }
   }
   is_finish_ = true;
+  slash::MutexLock l(&mutex);
   std::cout << "Classify " << type_ << " keys finish, keys num : " << key_num_ << std::endl;
   return NULL;
 }

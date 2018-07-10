@@ -15,6 +15,8 @@
 #include "blackwidow/blackwidow.h"
 #include "pink/include/pink_thread.h"
 
+extern slash::Mutex mutex;
+
 class Migrator: public pink::Thread {
   public:
     Migrator(int32_t migrator_id, nemo::Nemo* nemo_db, blackwidow::BlackWidow* blackwidow_db)

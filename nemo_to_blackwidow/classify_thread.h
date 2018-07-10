@@ -17,6 +17,8 @@
 
 #include "migrator.h"
 
+extern slash::Mutex mutex;
+
 class ClassifyThread : public pink::Thread {
   public:
     ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type)

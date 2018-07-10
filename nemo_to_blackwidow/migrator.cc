@@ -145,6 +145,7 @@ void* Migrator::ThreadMain() {
     }
     PlusMigrateKey();
   }
+  slash::MutexLock l(&mutex);
   std::cout << "Migrator " << migrator_id_ << " finish, keys num : " << migrate_key_num_ << " exit..." << std::endl;
   return NULL;
 }

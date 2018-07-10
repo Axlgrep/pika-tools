@@ -16,6 +16,7 @@ int32_t thread_num;
 std::string nemo_db_path;
 std::string blackwidow_db_path;
 
+slash::Mutex mutex;
 std::vector<Migrator*> migrators;
 std::vector<ClassifyThread*> classify_threads;
 
