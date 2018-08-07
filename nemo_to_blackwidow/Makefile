@@ -3,9 +3,8 @@ CXXFLAGS = -std=c++11 -g
 
 TARGET = nemo_to_blackwidow
 
-TOP_PATH = $(shell pwd)
-THIRD_PATH=$(TOP_PATH)/../third
-SRC_PATH=$(TOP_PATH)
+THIRD_PATH=../third
+SRC_PATH=.
 
 ROCKSDB_PATH=$(THIRD_PATH)/rocksdb
 ROCKSDB=$(ROCKSDB_PATH)/librocksdb.a
@@ -54,7 +53,7 @@ LIBS         = -lnemo                           \
                -lgflags                         \
                -lrt                             \
 
-SOURCE := $(wildcard $(TOP_PATH)/*.cc)
+SOURCE := $(wildcard $(SRC_PATH)/*.cc)
 OBJS := $(patsubst %.cc, %.o, $(SOURCE))
 
 $(TARGET): $(OBJS) $(NEMO) $(NEMO_ROCKSDB) $(BLACKWIDOW) $(PINK) $(SLASH) $(ROCKSDB)
@@ -65,16 +64,16 @@ $(OBJS): %.o : %.cc
 
 
 $(NEMO) :
-	make -C $(NEMO_PATH) ROCKSDB_PATH=$(ROCKSDB_PATH) NEMODB_PATH=$(NEMO_ROCKSDB_PATH)
+	make -C $(NEMO_PATH) ROCKSDB_PATH=../rocksdb NEMODB_PATH=../nemo-rocksdb
 
 $(NEMO_ROCKSDB) :
-	make -C $(NEMO_ROCKSDB_PATH) ROCKSDB_PATH=$(ROCKSDB_PATH)
+	make -C $(NEMO_ROCKSDB_PATH) ROCKSDB_PATH=../rocksdb
 
 $(BLACKWIDOW) : 
-	make -C $(BLACKWIDOW_PATH) ROCKSDB_PATH=$(ROCKSDB_PATH) SLASH_PATH=$(SLASH_PATH)
+	make -C $(BLACKWIDOW_PATH) ROCKSDB_PATH=../rocksdb SLASH_PATH=../slash
 
 $(PINK) :
-	make -C $(PINK_PATH)/pink SLASH_PATH=$(SLASH_PATH)
+	make -C $(PINK_PATH)/pink SLASH_PATH=../../slash
 
 $(SLASH) :
 	make -C $(SLASH_PATH)/slash

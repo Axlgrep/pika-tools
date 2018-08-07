@@ -4,5 +4,8 @@ tags
 #Compiled Object files
 *.o
 
+#Binlog Sender Binary file
+binlog_sender/binlog_sender
+
 #Nemo to Blackwidow Binary file
 nemo_to_blackwidow/nemo_to_blackwidow

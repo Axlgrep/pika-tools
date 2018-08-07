@@ -5,7 +5,27 @@
 
 #include "classify_thread.h"
 
+ClassifyThread::ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type)
+        : is_finish_(false),
+          key_num_(0),
+          consume_index_(0),
+          nemo_db_(nemo_db),
+          migrators_(migrators),
+          type_(type) {
+  pthread_rwlock_init(&rwlock_, NULL);
+}
+
+ClassifyThread::~ClassifyThread() {
+  pthread_rwlock_destroy(&rwlock_);
+};
+
+int64_t ClassifyThread::key_num() {
+  slash::RWLock l(&rwlock_, false);
+  return key_num_;
+}
+
 void ClassifyThread::PlusProcessKeyNum() {
+  slash::RWLock l(&rwlock_, true);
   key_num_++;
 }
 
@@ -55,7 +75,5 @@ void* ClassifyThread::ThreadMain() {
     }
   }
   is_finish_ = true;
-  slash::MutexLock l(&mutex);
-  std::cout << "Classify " << type_ << " keys finish, keys num : " << key_num_ << std::endl;
   return NULL;
 }

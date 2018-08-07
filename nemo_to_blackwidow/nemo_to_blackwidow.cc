@@ -10,6 +10,7 @@
 #include "blackwidow/blackwidow.h"
 
 #include "migrator.h"
+#include "progress_thread.h"
 #include "classify_thread.h"
 
 int32_t thread_num;
@@ -17,6 +18,7 @@ std::string nemo_db_path;
 std::string blackwidow_db_path;
 
 slash::Mutex mutex;
+ProgressThread* progress_thread;
 std::vector<Migrator*> migrators;
 std::vector<ClassifyThread*> classify_threads;
 
@@ -101,6 +103,8 @@ int main(int argc, char **argv) {
   classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::SET_DB));
   classify_threads.push_back(new ClassifyThread(nemo_db, migrators, nemo::ZSET_DB));
 
+  progress_thread = new ProgressThread(&classify_threads);
+
   std::cout << "Start migrating data from Nemo to Blackwidow..." << std::endl;
   for (int32_t idx = 0; idx < thread_num; ++idx) {
     migrators[idx]->StartThread();
@@ -109,6 +113,10 @@ int main(int argc, char **argv) {
   for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
     classify_threads[idx]->StartThread();
   }
+
+  progress_thread->StartThread();
+  progress_thread->JoinThread();
+  delete progress_thread;
 
   for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
     classify_threads[idx]->JoinThread();

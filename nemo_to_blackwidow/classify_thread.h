@@ -12,22 +12,21 @@
 #include <glog/logging.h>
 
 #include "nemo.h"
-#include "utils.h"
 #include "pink/include/pink_thread.h"
+#include "slash/include/slash_mutex.h"
 
+#include "utils.h"
 #include "migrator.h"
 
 extern slash::Mutex mutex;
 
 class ClassifyThread : public pink::Thread {
   public:
-    ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type)
-        : is_finish_(false), key_num_(0), consume_index_(0), nemo_db_(nemo_db), migrators_(migrators), type_(type) {
-    }
-    virtual ~ClassifyThread() {};
+    ClassifyThread(nemo::Nemo* nemo_db, std::vector<Migrator*> migrators, const std::string& type);
+    virtual ~ClassifyThread();
+    int64_t key_num();
     bool is_finish() { return is_finish_;}
     std::string type() { return type_;}
-    int64_t key_num() { return key_num_;}
     int64_t consume_index() { return consume_index_;}
   private:
     void PlusProcessKeyNum();
@@ -37,6 +36,7 @@ class ClassifyThread : public pink::Thread {
     bool is_finish_;
     int64_t key_num_;
     int64_t consume_index_;
+    pthread_rwlock_t rwlock_;
     nemo::Nemo* nemo_db_;
     std::string type_;
     std::vector<Migrator*> migrators_;
