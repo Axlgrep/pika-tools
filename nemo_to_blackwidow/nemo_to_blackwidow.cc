@@ -13,7 +13,8 @@
 #include "progress_thread.h"
 #include "classify_thread.h"
 
-int32_t thread_num;
+int32_t thread_num = 6;
+int32_t need_write_log = 0;
 std::string nemo_db_path;
 std::string blackwidow_db_path;
 
@@ -25,6 +26,7 @@ std::vector<ClassifyThread*> classify_threads;
 void PrintInfo(const std::time_t& now) {
   std::cout << "================== Nemo To Blackwidow ==================" << std::endl;
   std::cout << "Thread_num : " << thread_num << std::endl;
+  std::cout << "Need write log : " << (need_write_log ? "yes" : "no") << std::endl;
   std::cout << "Max batch limit : " << MAX_BATCH_LIMIT << std::endl;
   std::cout << "Nemo_db_path : " << nemo_db_path << std::endl;
   std::cout << "Blackwidow_db_path : " << blackwidow_db_path << std::endl;
@@ -34,8 +36,8 @@ void PrintInfo(const std::time_t& now) {
 
 void Usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "      ./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num]\n";
-  std::cout << "      example: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10\n";
+  std::cout << "      ./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log]\n";
+  std::cout << "      example: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1\n";
 }
 
 static void GlogInit() {
@@ -49,16 +51,36 @@ static void GlogInit() {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 5) {
+  if (argc != 3
+    && argc != 5
+    && argc != 7) {
     Usage();
-    return -1;
+    exit(-1);
   }
-
-  GlogInit();
 
   nemo_db_path = std::string(argv[1]);
   blackwidow_db_path = std::string(argv[2]);
-  thread_num = atoi(argv[4]);
+
+  if (argc >= 5) {
+    if (std::string(argv[3]) == "-n") {
+      thread_num = atoi(argv[4]);
+    } else {
+      Usage();
+      exit(-1);
+    }
+  }
+  if (argc >= 7) {
+    if (std::string(argv[5]) == "-l") {
+      need_write_log = atoi(argv[6]);
+    } else {
+      Usage();
+      exit(-1);
+    }
+  }
+
+  if (need_write_log) {
+    GlogInit();
+  }
 
   std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
   std::time_t now = std::chrono::system_clock::to_time_t(start_time);

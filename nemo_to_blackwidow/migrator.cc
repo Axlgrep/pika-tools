@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "migrator.h"
 
+extern int32_t need_write_log;
 int32_t Migrator::queue_size() {
   slash::MutexLock l(&queue_mutex_);
   return items_queue_.size();
@@ -70,7 +71,9 @@ void* Migrator::ThreadMain() {
       key = item.substr(1);
     }
 
-    LOG(INFO) << "migrator id: " << migrator_id_ << "  queue size: " << queue_size() << "  type : " << prefix << "  key: " << key;
+    if (need_write_log) {
+      LOG(INFO) << "migrator id: " << migrator_id_ << "  queue size: " << queue_size() << "  type : " << prefix << "  key: " << key;
+    }
 
     if (prefix == nemo::DataType::kKv) {
       blackwidow_db_->Set(key, value);
