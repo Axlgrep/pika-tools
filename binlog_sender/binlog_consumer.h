@@ -35,15 +35,17 @@ static const std::string kBinlogPrefix = "write2file";
 class BinlogConsumer {
   public:
     BinlogConsumer(const std::string& binlog_path,
-                   uint32_t file_num,
-                   uint64_t offset,
-                   uint32_t last_filenum);
+                   uint32_t first_filenum,
+                   uint32_t last_filenum,
+                   uint64_t offset);
     virtual ~BinlogConsumer();
 
     std::string NewFileName(const std::string& name,
                             const uint32_t current);
     bool Init();
     bool trim();
+    uint32_t current_filenum();
+    uint64_t current_offset();
     slash::Status Parse(std::string* scratch);
 
   private:
@@ -51,10 +53,12 @@ class BinlogConsumer {
     uint32_t ReadPhysicalRecord(slash::Slice* result);
     slash::Status Consume(std::string* scratch);
     std::string filename_;
+    uint32_t first_filenum_;
+    uint32_t last_filenum_;
+
     uint32_t current_filenum_; 
     uint64_t current_offset_;
     uint64_t last_record_offset_;
-    uint32_t last_filenum_;
 
 
     slash::Slice buffer_;

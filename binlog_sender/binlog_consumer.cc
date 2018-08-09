@@ -6,13 +6,13 @@
 #include "binlog_consumer.h"
 
 BinlogConsumer::BinlogConsumer(const std::string& binlog_path,
-                               uint32_t filenum,
-                               uint64_t offset,
-                               uint32_t last_filenum)
+                               uint32_t first_filenum,
+                               uint32_t last_filenum,
+                               uint64_t offset)
     : filename_(binlog_path + kBinlogPrefix),
-      current_filenum_(filenum),
-      current_offset_(offset),
+      first_filenum_(first_filenum),
       last_filenum_(last_filenum),
+      current_offset_(offset),
       backing_store_(new char[kBlockSize]),
       queue_(nullptr) {
 };
@@ -31,7 +31,7 @@ std::string BinlogConsumer::NewFileName(const std::string& name,
 
 bool BinlogConsumer::Init() {
   std::string profile;
-  for (int32_t idx = current_filenum_; idx <= last_filenum_; ++idx) {
+  for (int32_t idx = first_filenum_; idx <= last_filenum_; ++idx) {
     profile = NewFileName(filename_, idx);
     if (!slash::FileExists(profile)) {
       fprintf(stderr, "Binlog %s not exists\n", profile.c_str());
@@ -39,6 +39,7 @@ bool BinlogConsumer::Init() {
     }
   }
 
+  current_filenum_ = first_filenum_;
   profile = NewFileName(filename_, current_filenum_);
   slash::Status s = slash::NewSequentialFile(profile, &queue_);
   if (!s.ok()) {
@@ -74,6 +75,14 @@ bool BinlogConsumer::trim() {
   }
   last_record_offset_ = current_offset_ % kBlockSize;
   return true;
+}
+
+uint32_t BinlogConsumer::current_filenum() {
+  return current_filenum_;
+}
+
+uint64_t BinlogConsumer::current_offset() {
+  return current_offset_;
 }
 
 uint64_t BinlogConsumer::get_next(bool* is_error) {
@@ -145,7 +154,6 @@ uint32_t BinlogConsumer::ReadPhysicalRecord(slash::Slice *result) {
   }
 
   buffer_.clear();
-  //std::cout<<"2 --> con_offset_: "<<con_offset_<<" last_record_offset_: "<<last_record_offset_<<std::endl;
   s = queue_->Read(length, &buffer_, backing_store_);
   *result = slash::Slice(buffer_.data(), buffer_.size());
   last_record_offset_ += kHeaderSize + length;
@@ -222,7 +230,7 @@ slash::Status BinlogConsumer::Parse(std::string* scratch) {
 
           current_filenum_++;
           current_offset_ = 0;
-          last_record_offset_ = current_offset_ % kBlockSize;
+          last_record_offset_ = 0;
         } else {
           return slash::Status::NotFound("not found");
         }

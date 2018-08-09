@@ -14,11 +14,13 @@
 #define COMMA_STR            ","
 #define COLON_STR            ":"
 #define NEG_STR              "-"
+#define NEG_CHAR             '-'
 #define SPACE_STR            " "
 #define WRITE2FILE           "write2file"
 
 bool Exists(const std::string& base, const std::string& pattern);
-void GetFileList(const std::string& files_str, std::vector<uint32_t>* files);
+bool CheckFilesStr(const std::string& files_str);
+bool GetFileList(const std::string& files_str, std::vector<uint32_t>* files);
 bool CheckBinlogSequential(const std::vector<uint32_t>& files);
 bool CheckBinlogExists(const std::string& binlog_path, const std::vector<uint32_t>& files);
 

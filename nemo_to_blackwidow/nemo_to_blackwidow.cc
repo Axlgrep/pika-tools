@@ -36,8 +36,8 @@ void PrintInfo(const std::time_t& now) {
 
 void Usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "      ./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log]\n";
-  std::cout << "      example: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1\n";
+  std::cout << "\t./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log]\n";
+  std::cout << "\texample: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1\n";
 }
 
 static void GlogInit() {

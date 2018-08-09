@@ -99,7 +99,6 @@ bool PikaBinlogTransverter::BinlogDecode(BinlogType type,
   std::string binlog_str = binlog;
   slash::GetFixed16(&binlog_str, &binlog_type);
   if (binlog_type != type) {
-    //LOG(ERROR) << "Binlog Item type error, expect type:" << type << " actualy type: " << binlog_type;
     return false;
   }
   slash::GetFixed32(&binlog_str, &binlog_item->exec_time_);
@@ -111,7 +110,6 @@ bool PikaBinlogTransverter::BinlogDecode(BinlogType type,
   if (binlog_str.size() >= content_length) {
     binlog_item->content_.assign(binlog_str.data(), content_length);
   } else {
-    //LOG(ERROR) << "Binlog Item get content error, expect length:" << content_length << " left length:" << binlog_str.size();
     return false;
   }
   binlog_str.erase(0, content_length);

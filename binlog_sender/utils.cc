@@ -15,21 +15,23 @@ bool Exists(const std::string& base, const std::string& pattern) {
   }
 }
 
-void GetFileList(const std::string& files_str, std::vector<uint32_t>* files) {
-  std::string::size_type pos;
-  if (Exists(files_str, COMMA_STR)) {
-    std::string str = files_str + COMMA_STR;
-    for (uint32_t idx = 0; idx < str.size(); ++idx) {
-      pos = str.find(COMMA_STR, idx); 
-      if (pos != std::string::npos) {
-        std::string file = str.substr(idx, pos - idx);
-        files->push_back(atoi(file.data()));
-        idx = pos;
-      } else {
-        break;
-      }
+bool CheckFilesStr(const std::string& files_str) {
+  int32_t neg_count = 0;
+  for (const auto& c : files_str) {
+    if (isdigit(c)) {
+      continue;
+    } else if (c == NEG_CHAR) {
+      neg_count++;
+    } else {
+      return false;
     }
-  } else if (Exists(files_str, NEG_STR)) {
+  }
+  return neg_count <= 1 ? true : false;
+}
+
+bool GetFileList(const std::string& files_str, std::vector<uint32_t>* files) {
+  std::string::size_type pos;
+  if (Exists(files_str, NEG_STR)) {
     pos = files_str.find(NEG_STR);
     uint32_t start_file = atoi(files_str.substr(0, pos).data());
     uint32_t end_file = atoi(files_str.substr(pos + 1).data());
@@ -39,19 +41,7 @@ void GetFileList(const std::string& files_str, std::vector<uint32_t>* files) {
   } else {
     files->push_back(atoi(files_str.data()));
   }
-}
-
-bool CheckBinlogSequential(const std::vector<uint32_t>& files) {
-  if (files.size() <= 1) {
-    return true;
-  } else {
-    for (uint32_t idx = 0; idx <= files.size() - 2; ++idx) {
-      if (files[idx] + 1 != files[idx + 1]) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return !files->empty();
 }
 
 bool CheckBinlogExists(const std::string& binlog_path, const std::vector<uint32_t>& files) {
