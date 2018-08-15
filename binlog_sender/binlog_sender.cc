@@ -21,7 +21,7 @@
 #include "binlog_transverter.h"
 
 
-std::string binlog_path = "./log";
+std::string binlog_path = "./log/";
 std::string ip = "127.0.0.1";
 uint32_t port = 6379;
 std::string files_to_send = "0";
