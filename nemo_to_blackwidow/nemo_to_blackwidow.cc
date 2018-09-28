@@ -37,8 +37,12 @@ void PrintInfo(const std::time_t& now) {
 
 void Usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "\t./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log] -b [max_batch_limit]\n";
-  std::cout << "\texample: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1 -b 512\n";
+  std::cout << "\tNemo_to_Blackwidow reads data from Nemo DB and send to Blackwidow DB" << std::endl;
+  std::cout << "\t-h    -- displays this help information and exits" << std::endl;
+  std::cout << "\t-n    -- numbers of migrator, default = 6" << std::endl;
+  std::cout << "\t-l    -- whether write log, default = 0"<< std::endl;
+  std::cout << "\t-b    -- number of members in multiple data structures per migration, default = 512" << std::endl;
+  std::cout << "\texample: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 0 -b 512" << std::endl;
 }
 
 static void GlogInit() {
