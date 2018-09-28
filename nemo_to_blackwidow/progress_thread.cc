@@ -19,8 +19,9 @@ bool ProgressThread::AllClassifyTreadFinish() {
 }
 
 void* ProgressThread::ThreadMain() {
-  while(!AllClassifyTreadFinish()) {
+  while (true) {
     slash::MutexLock l(&mutex);
+    bool is_finish = AllClassifyTreadFinish();
     printf("\rstring keys: %5d, hashes keys: %5d, lists keys: %5d, sets keys: %5d, zsets keys: %5d ",
            (*classify_threads_)[0]->key_num(),
            (*classify_threads_)[1]->key_num(),
@@ -28,6 +29,9 @@ void* ProgressThread::ThreadMain() {
            (*classify_threads_)[3]->key_num(),
            (*classify_threads_)[4]->key_num());
     fflush(stdout);
+    if (is_finish) {
+      break;
+    }
   }
   slash::MutexLock l(&mutex);
   printf("\nClassify keys finished\n");

@@ -15,6 +15,7 @@
 
 int32_t thread_num = 6;
 int32_t need_write_log = 0;
+int32_t max_batch_limit = 512;
 std::string nemo_db_path;
 std::string blackwidow_db_path;
 
@@ -27,7 +28,7 @@ void PrintInfo(const std::time_t& now) {
   std::cout << "================== Nemo To Blackwidow ==================" << std::endl;
   std::cout << "Thread_num : " << thread_num << std::endl;
   std::cout << "Need write log : " << (need_write_log ? "yes" : "no") << std::endl;
-  std::cout << "Max batch limit : " << MAX_BATCH_LIMIT << std::endl;
+  std::cout << "Max batch limit : " << max_batch_limit << std::endl;
   std::cout << "Nemo_db_path : " << nemo_db_path << std::endl;
   std::cout << "Blackwidow_db_path : " << blackwidow_db_path << std::endl;
   std::cout << "Startup Time : " << asctime(localtime(&now));
@@ -36,8 +37,8 @@ void PrintInfo(const std::time_t& now) {
 
 void Usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "\t./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log]\n";
-  std::cout << "\texample: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1\n";
+  std::cout << "\t./nemo_to_blackwidow nemo_db_path blackwidow_db_path -n [thread_num] -l [need_write_log] -b [max_batch_limit]\n";
+  std::cout << "\texample: ./nemo_to_blackwidow ./nemo_db ./blackwidow_db -n 10 -l 1 -b 512\n";
 }
 
 static void GlogInit() {
@@ -53,7 +54,8 @@ static void GlogInit() {
 int main(int argc, char **argv) {
   if (argc != 3
     && argc != 5
-    && argc != 7) {
+    && argc != 7
+    && argc != 9) {
     Usage();
     exit(-1);
   }
@@ -72,6 +74,14 @@ int main(int argc, char **argv) {
   if (argc >= 7) {
     if (std::string(argv[5]) == "-l") {
       need_write_log = atoi(argv[6]);
+    } else {
+      Usage();
+      exit(-1);
+    }
+  }
+  if (argc >= 9) {
+    if (std::string(argv[7]) == "-b") {
+      max_batch_limit = atoi(argv[8]);
     } else {
       Usage();
       exit(-1);

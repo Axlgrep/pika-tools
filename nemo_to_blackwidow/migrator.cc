@@ -8,6 +8,7 @@
 #include "migrator.h"
 
 extern int32_t need_write_log;
+extern int32_t max_batch_limit;
 int32_t Migrator::queue_size() {
   slash::MutexLock l(&queue_mutex_);
   return items_queue_.size();
@@ -83,7 +84,7 @@ void* Migrator::ThreadMain() {
       while (iter->Valid()) {
         field_values.clear();
         for (int32_t idx = 0;
-             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx < max_batch_limit && iter->Valid();
              idx++, iter->Next()) {
           field_values.push_back({iter->field(), iter->value()});
         }
@@ -94,17 +95,17 @@ void* Migrator::ThreadMain() {
       std::vector<nemo::IV> ivs;
       std::vector<std::string> values;
       int64_t pos = 0;
-      nemo_db_->LRange(key, 0, pos + MAX_BATCH_LIMIT - 1, ivs);
+      nemo_db_->LRange(key, 0, pos + max_batch_limit - 1, ivs);
       while (!ivs.empty()) {
         for (const auto& node : ivs) {
           values.push_back(node.val);
         }
         blackwidow_db_->RPush(key, values, &uint64_ret);
 
-        pos += MAX_BATCH_LIMIT;
+        pos += max_batch_limit;
         ivs.clear();
         values.clear();
-        nemo_db_->LRange(key, pos, pos + MAX_BATCH_LIMIT - 1, ivs);
+        nemo_db_->LRange(key, pos, pos + max_batch_limit - 1, ivs);
       }
     } else if (prefix == nemo::DataType::kZSize) {
       std::vector<blackwidow::ScoreMember> score_members;
@@ -113,7 +114,7 @@ void* Migrator::ThreadMain() {
       while (iter->Valid()) {
         score_members.clear();
         for (int32_t idx = 0;
-             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx < max_batch_limit && iter->Valid();
              idx++, iter->Next()) {
           score_members.push_back({iter->score(), iter->member()});
         }
@@ -127,7 +128,7 @@ void* Migrator::ThreadMain() {
       while (iter->Valid()) {
         members.clear();
         for (int32_t idx = 0;
-             idx < MAX_BATCH_LIMIT && iter->Valid();
+             idx < max_batch_limit && iter->Valid();
              idx++, iter->Next()) {
           members.push_back(iter->member());
         }
