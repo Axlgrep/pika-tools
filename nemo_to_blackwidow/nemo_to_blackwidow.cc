@@ -115,13 +115,13 @@ int main(int argc, char **argv) {
 
   // Init blackwidow db
   rocksdb::Status status;
-  rocksdb::Options blackwidow_option;
-  blackwidow_option.create_if_missing = true;
-  blackwidow_option.write_buffer_size = 256 * 1024 * 1024;     // 256M
-  blackwidow_option.target_file_size_base = 20 * 1024 * 1024;  // 20M
+  blackwidow::BlackwidowOptions bw_option;
+  bw_option.options.create_if_missing = true;
+  bw_option.options.write_buffer_size = 256 * 1024 * 1024;     // 256M
+  bw_option.options.target_file_size_base = 20 * 1024 * 1024;  // 20M
   blackwidow::BlackWidow* blackwidow_db = new blackwidow::BlackWidow();
   if (blackwidow_db != NULL
-    && (status = blackwidow_db->Open(blackwidow_option, blackwidow_db_path)).ok()) {
+    && (status = blackwidow_db->Open(bw_option, blackwidow_db_path)).ok()) {
     std::cout << "Open BlackWidow db success..." << std::endl;
   } else {
     std::cout << "Open BlackWidow db failed..." << std::endl;
