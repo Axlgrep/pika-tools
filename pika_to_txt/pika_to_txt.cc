@@ -106,8 +106,8 @@ int main(int argc, char **argv) {
 
   std::cout << "Total Time Cost : "
             << hours << " hours "
-            << minutes - hours * 60 << " minutes "
-            << seconds - hours * 60 * 60 - minutes * 60 << " seconds "
+            << minutes % 60 << " minutes "
+            << seconds % 60 << " seconds "
             << std::endl;
 
   return 0; 
