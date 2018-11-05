@@ -81,8 +81,8 @@ static void Usage()
     fprintf(stderr,
             "Usage: pika_port [-h] [-t local_ip -p local_port -i master_ip -o master_port "
             "-m forward_ip -n forward_port -x forward_thread_num -y forward_passwd]\n"
-            "-f filenum -s offset -w password -r rsync_dump_path  -l log_path "
-            "\t-h               -- show this help\n"
+            "-f filenum -s offset -w password -r rsync_dump_path -l log_path \n"
+            "\t-h     -- show this help\n"
             "\t-t     -- local host ip(OPTIONAL default: 127.0.0.1) \n"
             "\t-p     -- local port(OPTIONAL) \n"
             "\t-i     -- master ip(OPTIONAL default: 127.0.0.1) \n"
