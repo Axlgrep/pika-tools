@@ -43,7 +43,7 @@ LIB_PATH = -L./ \
 # 			 -lpink \
 # 			 -lslash \
 # 			 -lblackwidow 
-LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lgflags -lz -lbz2 -llz4 -lzstd
+LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lgflags -lz -lbz2
 
 LIBS += $(ROCKSDB_LDFLAGS)
 
