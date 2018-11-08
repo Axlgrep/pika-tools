@@ -37,12 +37,7 @@ LIB_PATH = -L./ \
   -L$(THIRD_PATH)/pink/pink/lib \
   -L$(THIRD_PATH)/blackwidow/lib
 
-# LIBS = -Wl,-Bstatic -lrocksdb -lsnappy -lgflags -lz -lbz2 -llz4 -lzstd \
-# 			 -Wl,-Bdynamic -lpthread\
-# 			 -lrt \
-# 			 -lpink \
-# 			 -lslash \
-# 			 -lblackwidow 
+# LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lgflags -lz -lbz2 -llz4 -lzstd
 LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lgflags -lz -lbz2
 
 LIBS += $(ROCKSDB_LDFLAGS)
