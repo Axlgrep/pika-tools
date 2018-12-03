@@ -19,6 +19,5 @@ script:
   - git submodule update
   - cd ./binlog_sender && make && cd ..
   - cd ./nemo_to_blackwidow && make && cd ..
-  - cd ./pika_port && make && cd ..
   - cd ./pika_to_txt && make && cd ..
   - cd ./txt_to_pika && make && cd ..
