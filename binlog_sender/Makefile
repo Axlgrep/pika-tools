@@ -1,5 +1,11 @@
 CXX = g++
-CXXFLAGS = -std=c++11 -g
+
+WARNING_FLAGS = -W -Wextra -Wall -Wsign-compare \
+	-Wno-unused-parameter -Wno-redundant-decls -Wwrite-strings \
+	-Wpointer-arith -Wreorder -Wswitch -Wsign-promo \
+	-Woverloaded-virtual -Wnon-virtual-dtor -Wno-missing-field-initializers
+
+CXXFLAGS = $(WARNING_FLAGS) -std=c++11 -g
 
 TARGET = binlog_sender 
 

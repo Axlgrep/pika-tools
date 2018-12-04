@@ -31,7 +31,7 @@ std::string BinlogConsumer::NewFileName(const std::string& name,
 
 bool BinlogConsumer::Init() {
   std::string profile;
-  for (int32_t idx = first_filenum_; idx <= last_filenum_; ++idx) {
+  for (size_t idx = first_filenum_; idx <= last_filenum_; ++idx) {
     profile = NewFileName(filename_, idx);
     if (!slash::FileExists(profile)) {
       fprintf(stderr, "Binlog %s not exists\n", profile.c_str());

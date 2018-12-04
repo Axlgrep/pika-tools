@@ -46,7 +46,7 @@ bool GetFileList(const std::string& files_str, std::vector<uint32_t>* files) {
 
 bool CheckBinlogExists(const std::string& binlog_path, const std::vector<uint32_t>& files) {
   std::string filename = binlog_path + WRITE2FILE;
-  for (int32_t idx = 0; idx < files.size(); ++idx) {
+  for (size_t idx = 0; idx < files.size(); ++idx) {
     std::string binlog_file = filename + std::to_string(files[idx]);
     if (!slash::FileExists(binlog_file)) {
       return false;

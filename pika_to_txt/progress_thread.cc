@@ -19,5 +19,6 @@ void* ProgressThread::ThreadMain() {
     }
   }
   printf("\nScan strings finished\n");
+  return NULL;
 }
 

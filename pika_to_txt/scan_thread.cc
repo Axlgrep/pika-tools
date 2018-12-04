@@ -41,5 +41,6 @@ void* ScanThread::ThreadMain() {
     }
   } while (strcmp(next_key.data(), ""));
   is_finish_ = true;
+  return NULL;
 }
 

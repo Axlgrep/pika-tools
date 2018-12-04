@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   }
 
 
-  for (int32_t idx = 0; idx < thread_num; ++idx) {
+  for (size_t idx = 0; idx < static_cast<size_t>(thread_num); ++idx) {
     migrators.push_back(new Migrator(idx, nemo_db, blackwidow_db));
   }
 
@@ -142,11 +142,11 @@ int main(int argc, char **argv) {
   progress_thread = new ProgressThread(&classify_threads);
 
   std::cout << "Start migrating data from Nemo to Blackwidow..." << std::endl;
-  for (int32_t idx = 0; idx < thread_num; ++idx) {
+  for (size_t idx = 0; idx < static_cast<size_t>(thread_num); ++idx) {
     migrators[idx]->StartThread();
   }
 
-  for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
+  for (size_t idx = 0; idx < classify_threads.size(); ++idx) {
     classify_threads[idx]->StartThread();
   }
 
@@ -154,16 +154,16 @@ int main(int argc, char **argv) {
   progress_thread->JoinThread();
   delete progress_thread;
 
-  for (int32_t idx = 0; idx < classify_threads.size(); ++idx) {
+  for (size_t idx = 0; idx < classify_threads.size(); ++idx) {
     classify_threads[idx]->JoinThread();
     delete classify_threads[idx];
   }
 
-  for (int32_t idx = 0; idx < thread_num; ++idx) {
+  for (size_t idx = 0; idx < static_cast<size_t>(thread_num); ++idx) {
     migrators[idx]->SetShouldExit();
   }
 
-  for (int32_t idx = 0; idx < thread_num; ++idx) {
+  for (size_t idx = 0; idx < static_cast<size_t>(thread_num); ++idx) {
     migrators[idx]->JoinThread();
     delete migrators[idx];
   }

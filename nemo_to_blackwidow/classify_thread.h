@@ -38,8 +38,8 @@ class ClassifyThread : public pink::Thread {
     int64_t consume_index_;
     pthread_rwlock_t rwlock_;
     nemo::Nemo* nemo_db_;
-    std::string type_;
     std::vector<Migrator*> migrators_;
+    std::string type_;
 };
 
 #endif  //  INCLUDE_CLASSIFY_THREAD_H_
