@@ -135,10 +135,11 @@ void *ThreadMain(void* arg) {
                                                          3,
                                                          reinterpret_cast<const char**>(set_argv),
                                                          reinterpret_cast<const size_t*>(set_argvlen)));
-   if (res == NULL) {
-     //printf("set %s %s, Redis command argv error\n", key.c_str(), value.c_str());
-   } else {
-     //printf("set %s %s, res : %s Redis command argv success\n", key.c_str(), value.c_str(), res->str);
+   if (res == NULL || strcasecmp(res->str, "OK")) {
+     printf("Table %s, Thread %lu Exec command error, thread exit...\n", ta->table_name.data(),ta->idx);
+     freeReplyObject(res);
+     redisFree(c);
+     return NULL;
    }
    freeReplyObject(res);
   }
