@@ -12,3 +12,6 @@ binlog_sender/binlog_sender
 
 #Nemo to Blackwidow Binary file
 nemo_to_blackwidow/nemo_to_blackwidow
+
+#Benchmark Client Binary file
+benchmark_client/benchmark_client

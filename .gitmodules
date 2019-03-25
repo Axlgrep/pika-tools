@@ -16,3 +16,6 @@
 [submodule "third/slash"]
 	path = third/slash
 	url = https://github.com/Qihoo360/slash.git
+[submodule "third/hiredis-vip"]
+	path = third/hiredis-vip
+	url = https://github.com/vipshop/hiredis-vip.git
