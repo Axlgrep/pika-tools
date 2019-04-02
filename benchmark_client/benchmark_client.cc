@@ -19,11 +19,12 @@ using std::default_random_engine;
 
 static int32_t     last_seed = 0;
 
-std::string tables_str = "db1";
+std::string tables_str = "0";
 std::vector<std::string> tables;
 
 std::string hostname  = "127.0.0.1";
 int         port      =  9221;
+std::string password  = "";
 uint32_t    payload_size = 50;
 uint32_t    number_of_request = 100000;
 uint32_t    thread_num_each_table = 1;
@@ -96,6 +97,28 @@ void *ThreadMain(void* arg) {
     return NULL;
   }
 
+  const char* auth_argv[2] = {"AUTH", password.data()};
+  size_t auth_argv_len[2] = {4, password.size()};
+  res = reinterpret_cast<redisReply*>(redisCommandArgv(c,
+                                                       2,
+                                                       reinterpret_cast<const char**>(auth_argv),
+                                                       reinterpret_cast<const size_t*>(auth_argv_len)));
+  if (res == NULL) {
+    printf("Thread %lu  Auth Failed, Get reply Error\n", ta->tid);
+    freeReplyObject(res);
+    redisFree(c);
+    return NULL;
+  } else {
+    if (!strcasecmp(res->str, "OK")) {
+    } else {
+      printf("Thread %lu Auth Failed: %s, thread exit...\n", ta->idx, res->str);
+      freeReplyObject(res);
+      redisFree(c);
+      return NULL;
+    }
+  }
+  freeReplyObject(res);
+
   const char* select_argv[2] = {"SELECT", ta->table_name.data()};
   size_t  select_argv_len[2] = {6, ta->table_name.size()};
   res = reinterpret_cast<redisReply*>(redisCommandArgv(c,
@@ -152,13 +175,16 @@ void *ThreadMain(void* arg) {
 // ./benchmark_client -b db1:5:10000,db2:3:10000
 int main(int argc, char *argv[]) {
   int opt;
-  while ((opt = getopt(argc, argv, "h:p:t:c:d:n:")) != -1) {
+  while ((opt = getopt(argc, argv, "h:p:a:t:c:d:n:")) != -1) {
     switch (opt) {
       case 'h' :
         hostname = std::string(optarg);
         break;
       case 'p' :
         port = atoi(optarg);
+        break;
+      case 'a' :
+        password = std::string(optarg);
         break;
       case 't' :
         thread_num_each_table = atoi(optarg);
