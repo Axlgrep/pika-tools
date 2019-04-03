@@ -97,27 +97,29 @@ void *ThreadMain(void* arg) {
     return NULL;
   }
 
-  const char* auth_argv[2] = {"AUTH", password.data()};
-  size_t auth_argv_len[2] = {4, password.size()};
-  res = reinterpret_cast<redisReply*>(redisCommandArgv(c,
-                                                       2,
-                                                       reinterpret_cast<const char**>(auth_argv),
-                                                       reinterpret_cast<const size_t*>(auth_argv_len)));
-  if (res == NULL) {
-    printf("Thread %lu  Auth Failed, Get reply Error\n", ta->tid);
-    freeReplyObject(res);
-    redisFree(c);
-    return NULL;
-  } else {
-    if (!strcasecmp(res->str, "OK")) {
-    } else {
-      printf("Thread %lu Auth Failed: %s, thread exit...\n", ta->idx, res->str);
+  if (!password.empty()) {
+    const char* auth_argv[2] = {"AUTH", password.data()};
+    size_t auth_argv_len[2] = {4, password.size()};
+    res = reinterpret_cast<redisReply*>(redisCommandArgv(c,
+                                                         2,
+                                                         reinterpret_cast<const char**>(auth_argv),
+                                                         reinterpret_cast<const size_t*>(auth_argv_len)));
+    if (res == NULL) {
+      printf("Thread %lu  Auth Failed, Get reply Error\n", ta->tid);
       freeReplyObject(res);
       redisFree(c);
       return NULL;
+    } else {
+      if (!strcasecmp(res->str, "OK")) {
+      } else {
+        printf("Thread %lu Auth Failed: %s, thread exit...\n", ta->idx, res->str);
+        freeReplyObject(res);
+        redisFree(c);
+        return NULL;
+      }
     }
+    freeReplyObject(res);
   }
-  freeReplyObject(res);
 
   const char* select_argv[2] = {"SELECT", ta->table_name.data()};
   size_t  select_argv_len[2] = {6, ta->table_name.size()};
@@ -159,7 +161,7 @@ void *ThreadMain(void* arg) {
                                                          reinterpret_cast<const char**>(set_argv),
                                                          reinterpret_cast<const size_t*>(set_argvlen)));
    if (res == NULL || strcasecmp(res->str, "OK")) {
-     printf("Table %s, Thread %lu Exec command error, thread exit...\n", ta->table_name.data(),ta->idx);
+     printf("Table %s, Thread %lu Exec command error: %s, thread exit...\n", ta->table_name.data(), ta->idx, res != NULL ? res->str : "");
      freeReplyObject(res);
      redisFree(c);
      return NULL;
