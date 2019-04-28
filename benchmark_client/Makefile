@@ -36,6 +36,6 @@ clean:
 	rm -rf benchmark_client 
 
 distclean:
-	make -C $(SLASH_PATH) clean
+	make -C $(SLASH_PATH)/slash clean
 	make -C $(HIREDIS_PATH) clean
 	rm -rf benchmark_client 
