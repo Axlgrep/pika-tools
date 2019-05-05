@@ -33,9 +33,9 @@ benchmark_client : benchmark_client.cc
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY) $(HIREDIS_LIBRARY)
 
 clean:
-	rm -rf benchmark_client 
+	rm -rf benchmark_client
 
 distclean:
 	make -C $(SLASH_PATH)/slash clean
 	make -C $(HIREDIS_PATH) clean
-	rm -rf benchmark_client 
+	rm -rf benchmark_client
