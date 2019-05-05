@@ -206,9 +206,10 @@ bool TrysyncThread::TryUpdateMasterOffset() {
     master_ip.c_str(), master_port, filenum, offset);
 
   // Sanity check
-  if (master_ip != g_conf.master_ip ||
+  if ( // master_ip != g_conf.master_ip ||
       master_port != g_conf.master_port) {
-    pwarn("Error master %s:%d", master_ip.c_str(), master_port);
+    pwarn("Error master{%s:%d} != g_config.master{%s:%d} ", master_ip.c_str(),
+          master_port, g_conf.master_ip.c_str(), g_conf.master_port);
     return false;
   }
 
