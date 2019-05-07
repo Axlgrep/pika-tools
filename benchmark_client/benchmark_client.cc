@@ -12,28 +12,41 @@
 
 #include "hiredis.h"
 #include "slash/include/slash_string.h"
+#include "slash/include/slash_status.h"
 
 #define TIME_OF_LOOP          1000000
 
 using std::default_random_engine;
+using slash::Status;
 
-static int32_t     last_seed = 0;
 
-std::string tables_str = "0";
-std::vector<std::string> tables;
-
-std::string hostname  = "127.0.0.1";
-int         port      =  9221;
-std::string password  = "";
-uint32_t    payload_size = 50;
-uint32_t    number_of_request = 100000;
-uint32_t    thread_num_each_table = 1;
+Status RunSetCommand(redisContext* c);
+Status RunSetCommandPipeline(redisContext* c);
 
 struct ThreadArg{
   pthread_t tid;
   std::string table_name;
   size_t idx;
 };
+
+enum TransmitMode {
+  kNormal = 0,
+  kPipeline =1
+};
+
+static int32_t     last_seed = 0;
+
+std::string tables_str = "0";
+std::vector<std::string> tables;
+
+std::string   hostname  = "127.0.0.1";
+int           port      =  9221;
+std::string   password  = "";
+uint32_t      payload_size = 50;
+uint32_t      number_of_request = 100000;
+uint32_t      thread_num_each_table = 1;
+TransmitMode  transmit_mode = kNormal;
+int           pipeline_num = 0;
 
 void GenerateRandomString(int32_t len, std::string* target) {
   target->clear();
@@ -61,6 +74,7 @@ void PrintInfo(const std::time_t& now) {
   std::cout << "Thread num : " << thread_num_each_table << std::endl;
   std::cout << "Payload size : " << payload_size << std::endl;
   std::cout << "Number of request : " << number_of_request << std::endl;
+  std::cout << "Transmit mode: " << (transmit_mode == kNormal ? "No Pipeline" : "Pipeline") << std::endl;
   std::cout << "Collection of tables: " << tables_str << std::endl;
   std::cout << "Startup Time : " << asctime(localtime(&now));
   std::cout << "========================================================" << std::endl;
@@ -75,6 +89,7 @@ void Usage() {
   std::cout << "\t-c    -- collection of table names (default db1)" << std::endl;
   std::cout << "\t-d    -- data size of SET value in bytes (default 50)" << std::endl;
   std::cout << "\t-n    -- number of requests single thread (default 100000)" << std::endl;
+  std::cout << "\t-P    -- pipeline <numreq> requests. (default no pipeline)" << std::endl;
   std::cout << "\texample: ./benchmark_client -t 3 -c db1,db2 -d 1024" << std::endl;
 }
 
@@ -83,7 +98,7 @@ std::vector<ThreadArg> thread_args;
 void *ThreadMain(void* arg) {
   ThreadArg* ta = reinterpret_cast<ThreadArg*>(arg);
   redisContext *c;
-  redisReply *res;
+  redisReply *res = NULL;
   struct timeval timeout = { 1, 500000 }; // 1.5 seconds
   c = redisConnectWithTimeout(hostname.data(), port, timeout);
 
@@ -144,6 +159,68 @@ void *ThreadMain(void* arg) {
   }
   freeReplyObject(res);
 
+  if (transmit_mode == kNormal) {
+    Status s = RunSetCommand(c);
+    if (!s.ok()) {
+      std::string thread_info = "Table " + ta->table_name + ", Thread " + std::to_string(ta->idx);
+      printf("%s, %s, thread exit...\n", thread_info.c_str(), s.ToString().c_str());
+      redisFree(c);
+      return NULL;
+    }
+  } else if (transmit_mode == kPipeline) {
+    Status s = RunSetCommandPipeline(c);
+    if (!s.ok()) {
+      std::string thread_info = "Table " + ta->table_name + ", Thread " + std::to_string(ta->idx);
+      printf("%s, %s, thread exit...\n", thread_info.c_str(), s.ToString().c_str());
+      redisFree(c);
+      return NULL;
+    }
+  }
+
+  redisFree(c);
+  return NULL;
+}
+
+Status RunSetCommandPipeline(redisContext* c) {
+  redisReply *res = NULL;
+  for (size_t idx = 0; idx < number_of_request; (idx += pipeline_num)) {
+    const char* argv[3] = {"SET", NULL, NULL};
+    size_t argv_len[3] = {3, 0, 0};
+    for (int32_t batch_idx = 0; batch_idx < pipeline_num; ++batch_idx) {
+      std::string key;
+      std::string value;
+      GenerateRandomString(10, &key);
+      GenerateRandomString(payload_size, &value);
+
+      argv[1] = key.c_str(); argv_len[1] = key.size();
+      argv[2] = value.c_str(); argv_len[2] = value.size();
+
+      if (redisAppendCommandArgv(c,
+                                 3,
+                                 reinterpret_cast<const char**>(argv),
+                                 reinterpret_cast<const size_t*>(argv_len)) == REDIS_ERR) {
+        return Status::Corruption("Redis Append Command Argv Error");
+      }
+    }
+
+    for (int32_t batch_idx = 0; batch_idx < pipeline_num; ++batch_idx) {
+      if (redisGetReply(c, reinterpret_cast<void**>(&res)) == REDIS_ERR) {
+        return Status::Corruption("Redis Pipeline Get Reply Error");
+      } else {
+        if (res == NULL || strcasecmp(res->str, "OK")) {
+          std::string res_str = "Exec command error: " + (res != NULL ? std::string(res->str) : "");
+          freeReplyObject(res);
+          return Status::Corruption(res_str);
+        }
+        freeReplyObject(res);
+      }
+    }
+  }
+  return Status::OK();
+}
+
+Status RunSetCommand(redisContext* c) {
+  redisReply *res = NULL;
   for (size_t idx = 0; idx < number_of_request; ++idx) {
     const char* set_argv[3];
     size_t set_argvlen[3];
@@ -160,30 +237,34 @@ void *ThreadMain(void* arg) {
                                                          3,
                                                          reinterpret_cast<const char**>(set_argv),
                                                          reinterpret_cast<const size_t*>(set_argvlen)));
-   if (res == NULL || strcasecmp(res->str, "OK")) {
-     printf("Table %s, Thread %lu Exec command error: %s, thread exit...\n", ta->table_name.data(), ta->idx, res != NULL ? res->str : "");
-     freeReplyObject(res);
-     redisFree(c);
-     return NULL;
-   }
-   freeReplyObject(res);
+    if (res == NULL || strcasecmp(res->str, "OK")) {
+      std::string res_str = "Exec command error: " + (res != NULL ? std::string(res->str) : "");
+      freeReplyObject(res);
+      return Status::Corruption(res_str);
+    }
+    freeReplyObject(res);
   }
-  redisFree(c);
-  return NULL;
+  return Status::OK();
 }
+
+
 
 // ./benchmark_client
 // ./benchmark_client -h
 // ./benchmark_client -b db1:5:10000,db2:3:10000
 int main(int argc, char *argv[]) {
   int opt;
-  while ((opt = getopt(argc, argv, "h:p:a:t:c:d:n:")) != -1) {
+  while ((opt = getopt(argc, argv, "P:h:p:a:t:c:d:n:")) != -1) {
     switch (opt) {
       case 'h' :
         hostname = std::string(optarg);
         break;
       case 'p' :
         port = atoi(optarg);
+        break;
+      case 'P' :
+        transmit_mode = kPipeline;
+        pipeline_num = atoi(optarg);
         break;
       case 'a' :
         password = std::string(optarg);
