@@ -21,3 +21,6 @@ pika-port/pika_port_2/pika_port
 
 # Pika port 3 Binary file
 pika-port/pika_port_3/pika_port
+
+# Multi db auto dbsync Binary file
+multi_db_auto_dbsync/auto_dbsync
