@@ -22,6 +22,7 @@ using slash::Status;
 
 Status RunSetCommand(redisContext* c);
 Status RunSetCommandPipeline(redisContext* c);
+Status RunZAddCommand(redisContext* c);
 
 struct ThreadArg{
   pthread_t tid;
@@ -243,6 +244,39 @@ Status RunSetCommand(redisContext* c) {
       return Status::Corruption(res_str);
     }
     freeReplyObject(res);
+  }
+  return Status::OK();
+}
+
+Status RunZAddCommand(redisContext* c) {
+  redisReply *res = NULL;
+  for (size_t idx = 0; idx < 1; ++idx) {
+    const char* zadd_argv[4];
+    size_t zadd_argvlen[4];
+    std::string key;
+    std::string score;
+    std::string member;
+    GenerateRandomString(10, &key);
+
+    zadd_argv[0] = "zadd"; zadd_argvlen[0] = 4;
+    zadd_argv[1] = key.c_str(); zadd_argvlen[1] = key.size();
+    for (size_t sidx = 0; sidx < 10000; ++sidx) {
+      score = std::to_string(sidx * 2);
+      GenerateRandomString(payload_size, &member);
+      zadd_argv[2] = score.c_str(); zadd_argvlen[2] = score.size();
+      zadd_argv[3] = member.c_str(); zadd_argvlen[3] = member.size();
+
+      res = reinterpret_cast<redisReply*>(redisCommandArgv(c,
+                                                           4,
+                                                           reinterpret_cast<const char**>(zadd_argv),
+                                                           reinterpret_cast<const size_t*>(zadd_argvlen)));
+      if (res == NULL || res->integer == 0) {
+        std::string res_str = "Exec command error: " + (res != NULL ? std::string(res->str) : "");
+        freeReplyObject(res);
+        return Status::Corruption(res_str);
+      }
+      freeReplyObject(res);
+    }
   }
   return Status::OK();
 }
