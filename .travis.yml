@@ -21,3 +21,6 @@ script:
   - cd ./nemo_to_blackwidow && make && cd ..
   - cd ./pika_to_txt && make && cd ..
   - cd ./txt_to_pika && make && cd ..
+  - cd ./pika-port/pika_port_2 && make && cd .. && cd ..
+  - cd ./pika-port/pika_port_3 && make && cd .. && cd ..
+

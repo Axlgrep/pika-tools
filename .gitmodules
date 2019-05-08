@@ -19,3 +19,6 @@
 [submodule "third/hiredis-vip"]
 	path = third/hiredis-vip
 	url = https://github.com/vipshop/hiredis-vip.git
+[submodule "third/glog"]
+	path = third/glog
+	url = https://github.com/Qihoo360/glog.git

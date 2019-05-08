@@ -15,3 +15,9 @@ nemo_to_blackwidow/nemo_to_blackwidow
 
 #Benchmark Client Binary file
 benchmark_client/benchmark_client
+
+# Pika port 2 Binary file
+pika-port/pika_port_2/pika_port
+
+# Pika port 3 Binary file
+pika-port/pika_port_3/pika_port
