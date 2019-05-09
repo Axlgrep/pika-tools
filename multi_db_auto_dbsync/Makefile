@@ -29,21 +29,18 @@ PINK : $(SLASH)
 SLASH :
 	make -C $(SLASH_PATH)/slash
 
-pika_conf.o : pika_conf.cc
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $^ -o $@  $(INCLUDE_PATH) $(PINK_LIBRARY)
-
 pika_binlog.o : pika_binlog.cc
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY)
 
-auto_dbsync : auto_dbsync.cc pika_binlog.o pika_conf.o
+auto_dbsync : auto_dbsync.cc pika_binlog.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY)
 
 clean:
 	rm -rf auto_dbsync
-	rm -rf pika_binlog.o pika_conf.o
+	rm -rf pika_binlog.o
 
 distclean:
 	make -C $(SLASH_PATH)/slash clean
 	make -C $(PINK_PATH)/pink clean
 	rm -rf auto_dbsync
-	rm -rf pika_binlog.o pika_conf.o
+	rm -rf pika_binlog.o

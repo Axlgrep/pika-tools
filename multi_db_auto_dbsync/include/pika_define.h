@@ -9,8 +9,6 @@
 #include "pink/include/redis_cli.h"
 #include <glog/logging.h>
 
-#include "include/pika_conf.h"
-
 #define PIKA_SYNC_BUFFER_SIZE           10
 #define PIKA_MAX_WORKER_THREAD_NUM      24
 #define PIKA_REPL_SERVER_TP_SIZE        3
@@ -35,16 +33,16 @@ typedef WorkerCronTask MonitorCronTask;
 #define TASK_KILL 0
 #define TASK_KILLALL 1
 
-//slave item
-struct SlaveItem {
-  std::string ip_port;
-  std::string ip;
-  int port;
-  int conn_fd;
-  int stage;
-  std::vector<TableStruct> table_structs;
-  struct timeval create_time;
-};
+////slave item
+//struct SlaveItem {
+//  std::string ip_port;
+//  std::string ip;
+//  int port;
+//  int conn_fd;
+//  int stage;
+//  std::vector<TableStruct> table_structs;
+//  struct timeval create_time;
+//};
 
 struct BinlogOffset {
   uint32_t filenum;

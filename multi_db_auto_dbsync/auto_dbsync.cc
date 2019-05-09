@@ -10,9 +10,9 @@
 #include <iostream>
 
 #include "slash/include/slash_status.h"
+#include "slash/include/slash_string.h"
 #include "include/pika_binlog.h"
 
-PikaConf* g_pika_conf;
 std::string db_dump_path;
 int32_t db_dump_filenum;
 int64_t db_dump_offset;
