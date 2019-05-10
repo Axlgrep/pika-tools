@@ -16,7 +16,6 @@
 std::string db_dump_path;
 int32_t db_dump_filenum;
 int64_t db_dump_offset;
-std::string new_pika_db_path;
 std::string new_pika_log_path;
 
 void ParseInfoFile(const std::string& path) {
@@ -70,7 +69,6 @@ void PrintInfo() {
   std::cout << std::endl;
   std::cout << "==================== Configuration =====================" << std::endl;
   std::cout << "Db dump path:          " << db_dump_path << std::endl;
-  std::cout << "New Pika db_path:      " << new_pika_db_path << std::endl;
   std::cout << "New Pika log_path:     " << new_pika_log_path << std::endl;
   std::cout << "========================================================" << std::endl;
   std::cout << std::endl;
@@ -79,21 +77,16 @@ void PrintInfo() {
 void Usage() {
   std::cout << "Usage: " << std::endl;
   std::cout << "  -d   -- db dump path (required)" << std::endl;
-  std::cout << "  -b   -- new pika db_path (required)" << std::endl;
   std::cout << "  -l   -- new pika log_path (required)" << std::endl;
-  std::cout << "  example: ./auto_db_sync -d user@hostname:/data1/pika_old/dump/20190508/ -b /data01/pika_new/db/db0 -l /data01/pika_new/log/db0" << std::endl;
+  std::cout << "  example: ./auto_db_sync -d /data1/pika_old/dump/20190508/ -l /data01/pika_new/log/db0" << std::endl;
 }
-
 
 int main(int argc, char* argv[]) {
   int opt;
-  while ((opt = getopt(argc, argv, "d:b:l:")) != -1) {
+  while ((opt = getopt(argc, argv, "d:l:")) != -1) {
     switch (opt) {
       case 'd' :
         db_dump_path = std::string(optarg);
-        break;
-      case 'b' :
-        new_pika_db_path = std::string(optarg);
         break;
       case 'l' :
         new_pika_log_path = std::string(optarg);
@@ -103,8 +96,7 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
   }
-  if (db_dump_path.empty() || new_pika_db_path.empty()
-      || new_pika_log_path.empty()) {
+  if (db_dump_path.empty() || new_pika_log_path.empty()) {
     Usage();
     exit(-1);
   }
@@ -123,15 +115,6 @@ int main(int argc, char* argv[]) {
     exit(-1);
   }
 
-  if (new_pika_db_path.back() != '/') {
-    new_pika_db_path.push_back('/');
-  }
-  // if this dir exist
-  if (slash::IsDir(new_pika_db_path) == 0) {
-    std::cout << "Dir " << new_pika_db_path << "exist, please delete it!" << std::endl;
-    exit(-1);
-  }
-
   if (new_pika_log_path.back() != '/') {
     new_pika_log_path.push_back('/');
   }
@@ -142,46 +125,10 @@ int main(int argc, char* argv[]) {
   }
 
   PrintInfo();
+  std::cout << std::endl << "Step 1, Parse Info file from " << db_dump_path << std::endl;
+  ParseInfoFile(db_dump_path);
 
-  std::cout << std::endl << "Step 1, Create New Pika db path." << std::endl;
-  // create new pika log path
-  int res = slash::CreatePath(new_pika_db_path);
-  if (res) {
-    std::cout << "CreatePath " << new_pika_db_path << " failed" << std::endl;
-    exit(-1);
-  }
-  std::cout << "  " << new_pika_db_path << std::endl;
-
-  std::cout << std::endl << "Step 2, Create New Pika log path." << std::endl;
-  // create new pika log path
-  res = slash::CreatePath(new_pika_log_path);
-  if (res) {
-    std::cout << "CreatePath " << new_pika_log_path << " failed" << std::endl;
-    exit(-1);
-  }
-  std::cout << "  " << new_pika_log_path << std::endl;
-
-  std::cout << std::endl << "Step 3, Copy from " << db_dump_path << " to " << new_pika_db_path << std::endl;
-  // copy db dump to new pika db path
-  std::string copy_cmd = "rsync -avh --bwlimit=50000 -e ssh " + db_dump_path + " " + new_pika_db_path +  " --progress";
-  std::cout << "command: " << copy_cmd << std::endl;
-  while (1) {
-    std::cout << "Confirm: Y/N" << std::endl;
-    std::string confirm;
-    std::cin >> confirm;
-    std::transform(confirm.begin(), confirm.end(), confirm.begin(), ::tolower);
-    if (confirm == "y" || confirm == "yes") {
-      break;
-    } else if (confirm == "n" || confirm == "no") {
-      exit(-1);
-    }
-  }
-  system(copy_cmd.c_str());
-
-  std::cout << std::endl << "Step 4, Parse Info file from " << db_dump_path << std::endl;
-  ParseInfoFile(new_pika_db_path);
-
-  std::cout << std::endl << "Step 5, Generate manifest file to " << new_pika_log_path << std::endl;
+  std::cout << std::endl << "Step 2, Generate manifest file to " << new_pika_log_path << std::endl;
   // generate manifest and newest binlog
   Binlog binlog(new_pika_log_path);
   slash::Status s = binlog.SetProducerStatus(db_dump_filenum, db_dump_offset);
