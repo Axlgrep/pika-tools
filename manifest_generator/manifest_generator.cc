@@ -78,7 +78,7 @@ void Usage() {
   std::cout << "Usage: " << std::endl;
   std::cout << "  -d   -- db dump path (required)" << std::endl;
   std::cout << "  -l   -- new pika log_path (required)" << std::endl;
-  std::cout << "  example: ./auto_db_sync -d /data1/pika_old/dump/20190508/ -l /data01/pika_new/log/db0" << std::endl;
+  std::cout << "  example: ./manifest_generator -d /data1/pika_old/dump/20190508/ -l /data01/pika_new/log/db0" << std::endl;
 }
 
 int main(int argc, char* argv[]) {

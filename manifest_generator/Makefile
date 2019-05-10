@@ -21,7 +21,7 @@ INCLUDE_PATH = -I./                        \
                -I$(SLASH_PATH)             \
 			   -I$(PINK_PATH)           \
 
-OBJECT : SLASH PINK auto_dbsync
+OBJECT : SLASH PINK manifest_generator
 
 PINK : $(SLASH)
 	make -C $(PINK_PATH)/pink NO_PB=0 SLASH_PATH=$(SLASH_PATH)
@@ -32,15 +32,15 @@ SLASH :
 pika_binlog.o : pika_binlog.cc
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -c $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY)
 
-auto_dbsync : auto_dbsync.cc pika_binlog.o
+manifest_generator : manifest_generator.cc pika_binlog.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY)
 
 clean:
-	rm -rf auto_dbsync
+	rm -rf manifest_generator
 	rm -rf pika_binlog.o
 
 distclean:
 	make -C $(SLASH_PATH)/slash clean
 	make -C $(PINK_PATH)/pink clean
-	rm -rf auto_dbsync
+	rm -rf manifest_generator
 	rm -rf pika_binlog.o
