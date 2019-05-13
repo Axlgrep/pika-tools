@@ -103,18 +103,6 @@ int main(int argc, char* argv[]) {
   if (db_dump_path.back() != '/') {
      db_dump_path.push_back('/');
   }
-  std::size_t found = db_dump_path.find("dump");
-  if (found != std::string::npos) {
-    if (db_dump_path.size() - 1 - found == 4) {
-      // input db path like: /data1/pika111/dump/
-      std::cout << "Choose a db dump under: " << db_dump_path << std::endl;
-      exit(-1);
-    }
-  } else  {
-    std::cout << "Db dump path invalid" << std::endl;
-    exit(-1);
-  }
-
   if (new_pika_log_path.back() != '/') {
     new_pika_log_path.push_back('/');
   }
