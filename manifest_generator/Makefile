@@ -1,6 +1,6 @@
 CXX = g++
 
-LDFLAGS=-lpthread -lsnappy
+LDFLAGS=-lpthread
 
 WARNING_FLAGS = -W -Wextra -Wall -Wsign-compare \
 	-Wno-unused-parameter -Wno-redundant-decls -Wwrite-strings \
@@ -32,15 +32,20 @@ SLASH :
 pika_binlog.o : pika_binlog.cc
 	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(INCLUDE_PATH)
 
-manifest_generator : manifest_generator.cc pika_binlog.o
-	$(CXX) $(CXXFLAGS) $^ -o $@  $(INCLUDE_PATH) $(SLASH_LIBRARY) $(LDFLAGS)
+manifest_generator.o : manifest_generator.cc pika_binlog.o
+	$(CXX) $(CXXFLAGS) -c $^ -o $@ $(INCLUDE_PATH)
+
+manifest_generator : manifest_generator.o pika_binlog.o
+	$(CXX) $^  $(SLASH_LIBRARY) -o $@ $(LDFLAGS)
 
 clean:
 	rm -rf manifest_generator
 	rm -rf pika_binlog.o
+	rm -rf manifest_generator.o
 
 distclean:
 	make -C $(SLASH_PATH)/slash clean
 	make -C $(PINK_PATH)/pink clean
 	rm -rf manifest_generator
 	rm -rf pika_binlog.o
+	rm -rf manifest_generator.o

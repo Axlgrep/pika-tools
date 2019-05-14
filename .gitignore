@@ -24,3 +24,4 @@ pika-port/pika_port_3/pika_port
 
 # manifest_generator Binary file
 manifest_generator/manifest_generator
+manifest_generator/static_manifest_generator
