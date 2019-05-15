@@ -100,8 +100,9 @@ static void Usage()
             "\t-l     -- local log path(OPTIONAL default: ./log) \n"
             "\t-b     -- max batch number when port rsync dump data (OPTIONAL default: 512) \n"
             "\t-d     -- daemonize(OPTIONAL) \n"
+            "\t-e     -- exit(return -1) if dbsync start(OPTIONAL) \n"
             "  example: ./pika_port -t 127.0.0.1 -p 12345 -i 127.0.0.1 -o 9221 "
-            "-m 127.0.0.1 -n 6379 -x 7 -f 0 -s 0 -w abc -l ./log -r ./rsync_dump -b 512 -d\n"
+            "-m 127.0.0.1 -n 6379 -x 7 -f 0 -s 0 -w abc -l ./log -r ./rsync_dump -b 512 -d -e\n"
            );
 }
 
@@ -116,7 +117,7 @@ int main(int argc, char *argv[])
   char buf[1024];
   bool is_daemon = false;
   long num = 0;
-  while (-1 != (c = getopt(argc, argv, "t:p:i:o:f:s:w:r:l:m:n:x:y:z:b:dh"))) {
+  while (-1 != (c = getopt(argc, argv, "t:p:i:o:f:s:w:r:l:m:n:x:y:z:b:edh"))) {
     switch (c) {
       case 't':
         snprintf(buf, 1024, "%s", optarg);
@@ -194,7 +195,9 @@ int main(int argc, char *argv[])
         slash::string2l(buf, strlen(buf), &(num));
         g_conf.sync_batch_num = (size_t)(num);
         break;
-
+      case 'e':
+        g_conf.exit_if_dbsync = true;
+        break;
       case 'd':
         is_daemon = true;
         break;

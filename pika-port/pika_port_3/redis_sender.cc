@@ -117,7 +117,7 @@ void RedisSender::SendRedisCommand(const std::string &command) {
     return;
   }
 
-  pwarn("%d commands queue size is beyond 100000", id_);
+  //pwarn("%d commands queue size is beyond 100000", id_);
   while (commands_queue_.size() > 100000) {
     wsignal_.Wait();
   }

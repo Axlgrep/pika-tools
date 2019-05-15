@@ -144,6 +144,9 @@ bool TrysyncThread::RecvProc() {
         // 1, Master do bgsave first.
         // 2, Master waiting for an existing bgsaving process
         // 3, Master do dbsyncing
+        if (g_conf.exit_if_dbsync) {
+          exit(-1);
+        }
         pinfo("Need to wait for pika master sync");
         g_pika_port->NeedWaitDBSync();
         // break;
