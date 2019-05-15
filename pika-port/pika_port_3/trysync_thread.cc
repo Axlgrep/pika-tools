@@ -145,6 +145,7 @@ bool TrysyncThread::RecvProc() {
         // 2, Master waiting for an existing bgsaving process
         // 3, Master do dbsyncing
         if (g_conf.exit_if_dbsync) {
+          pwarn("Exit, due to -e option configured");
           exit(-1);
         }
         pinfo("Need to wait for pika master sync");
