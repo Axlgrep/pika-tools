@@ -26,3 +26,12 @@ pika-port/pika_port_3/static_pika_port
 # manifest_generator Binary file
 manifest_generator/manifest_generator
 manifest_generator/static_manifest_generator
+
+# ssdb to pika Binary file
+ssdb_to_pika/ssdb_to_pika
+
+# aof to pika Binary file
+aof_to_pika/output/bin/aof_to_pika
+
+## txt to pika Binary file
+txt_to_pika/txt_to_pika

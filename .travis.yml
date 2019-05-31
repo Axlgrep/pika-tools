@@ -7,7 +7,7 @@ os:
 
 addons:
   apt:
-    packages: ['libsnappy-dev', 'libprotobuf-dev', 'libgoogle-glog-dev']
+    packages: ['libsnappy-dev', 'libprotobuf-dev', 'libgoogle-glog-dev', 'liblz4-dev']
 
 compiler:
   - gcc
@@ -24,3 +24,4 @@ script:
   - cd ./pika-port/pika_port_2 && make && cd .. && cd ..
   - cd ./pika-port/pika_port_3 && make && cd .. && cd ..
   - cd ./manifest_generator && make && cd ..
+  - cd ./ssdb_to_pika && make && cd ..
