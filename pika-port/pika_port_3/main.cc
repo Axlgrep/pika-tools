@@ -29,7 +29,7 @@ static int lockFile(int fd) {
   return fcntl(fd, F_SETLK, &lock);
 }
 
-static void createPidFile(char *file) {
+static void createPidFile(const char *file) {
   int fd = open(file, O_RDWR | O_CREAT | O_DIRECT, S_IRUSR | S_IWUSR);
   if (-1 == fd) {
     pfatal("open(%s) = %d, error:%m", file, fd);
@@ -243,7 +243,8 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-  createPidFile("/tmp/pika_port");
+  std::string pid_file_name = "/tmp/pika_port_" + std::to_string(getpid());
+  createPidFile(pid_file_name.c_str());
 
   // daemonize if needed
   if (is_daemon) {
