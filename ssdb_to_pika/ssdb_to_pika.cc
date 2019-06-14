@@ -54,7 +54,7 @@ void BlackwidowMigrateKv(const std::string& ip, const int port,
       }
       std::string ttl = *(tmp_resp->begin() + 1);
       if ("-1" == ttl) {
-        status_blackwidow = db->Set(*iter, *(iter+1));
+        status_blackwidow = db->Set(*iter, *(iter + 1));
       }
       else {
         int32_t time_to_live = atoi(ttl.c_str());
@@ -109,7 +109,7 @@ void BlackwidowMigrateHash(const std::string& ip, const int port,
       if (fvs.empty()) {
         break;
       }
-      for (auto it = fvs.begin(); it != fvs.end(); it+=2) {
+      for (auto it = fvs.begin(); it != fvs.end(); it += 2) {
         int32_t ret;
         status_blackwidow = db->HSet(*iter, *it, *(it + 1), &ret);
         if (!status_blackwidow.ok()) {
@@ -278,7 +278,7 @@ void BlackwidowDoKv(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(BlackwidowMigrateKv, ip, port,
                             password, db, std::ref(num_of_kv[thread_num]), prev_start, keys.back());
-    thread_num ++;
+    thread_num++;
     start = prev_start = keys.back();
   }
 
@@ -287,7 +287,7 @@ void BlackwidowDoKv(const std::string& ip, const int port,
     delete threads[i];
   }
   int total_num = 0;
-  for (int i = 0; i < thread_num; i ++){
+  for (int i = 0; i < thread_num; i++){
     total_num += num_of_kv[i];
   }
   std::cout << "===========Kv migrate done=============" << std::endl;
@@ -320,7 +320,7 @@ void BlackwidowDoHash(const std::string& ip, const int port,
   std::thread *threads[1000];
   int thread_num = 0;
   int num_of_hash[1000];
-  for (int i = 0; i < thread_num; i ++) {
+  for (int i = 0; i < thread_num; i++) {
     num_of_hash[i] = 0;
   } 
   std::string prev_start = "";
@@ -346,7 +346,7 @@ void BlackwidowDoHash(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(BlackwidowMigrateHash, ip, port, 
                           password, db, keys, std::ref(num_of_hash[thread_num]));
-    thread_num ++;
+    thread_num++;
     start = prev_start = resp->back();
   }
 
@@ -388,7 +388,7 @@ void BlackwidowDoZset(const std::string& ip, const int port,
   ssdb::Status status_ssdb;
   std::thread *threads[1000];
   int num_of_zset[1000];
-  for (int i = 0; i < 1000; i ++) {
+  for (int i = 0; i < 1000; i++) {
     num_of_zset[i] = 0;
   }
   int thread_num = 0;
@@ -415,7 +415,7 @@ void BlackwidowDoZset(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(BlackwidowMigrateZset, ip, port, 
                              password, db, keys, std::ref(num_of_zset[thread_num]));
-    thread_num ++;
+    thread_num++;
     start = prev_start = resp->back();
   }
 
@@ -424,7 +424,7 @@ void BlackwidowDoZset(const std::string& ip, const int port,
     delete threads[i];
   }
   int total_num = 0;
-  for (int i = 0; i < thread_num; i ++) {
+  for (int i = 0; i < thread_num; i++) {
     total_num += num_of_zset[i];
   }
   std::cout << "========Zset migrate done============" << std::endl;
@@ -457,7 +457,7 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
   ssdb::Status status_ssdb;
   std::thread *threads[1000];
   int num_of_list[1000];
-  for (int i = 0; i < 1000; i ++) {
+  for (int i = 0; i < 1000; i++) {
     num_of_list[i] = 0;
   }
   int thread_num = 0;
@@ -483,7 +483,7 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(BlackwidowMigrateQueue, ip, port,
                          password, db, keys, std::ref(num_of_list[thread_num]));
-    thread_num ++;
+    thread_num++;
     start = prev_start = resp->back();
   }
 
@@ -544,7 +544,7 @@ void NemoMigrateKv(const std::string& ip, const int port,
     if (kvs.size() == 0) {
       break;
     }
-    for (auto iter = kvs.begin(); iter != kvs.end(); iter+=2) {
+    for (auto iter = kvs.begin(); iter != kvs.end(); iter += 2) {
       //std::cout << "set " << *iter << " " << *(iter+1) << std::endl;
       const std::vector<std::string>* tmp_resp;
       tmp_resp = client->request("ttl", *iter);
@@ -560,8 +560,8 @@ void NemoMigrateKv(const std::string& ip, const int port,
       }
       else {
         int32_t time_to_live = atoi(ttl.c_str());
-        //std::cout << "set " << *iter << " " << *(iter+1) <<"  time to live  " << ttl << std::endl;
-        status_nemo = db->Set(*iter, *(iter+1), time_to_live);
+        //std::cout << "set " << *iter << " " << *(iter + 1) <<"  time to live  " << ttl << std::endl;
+        status_nemo = db->Set(*iter, *(iter + 1), time_to_live);
       }
       if (!status_nemo.ok()) {
         std::cout << "Kv client set error, key: " << *iter << std::endl;
@@ -613,8 +613,8 @@ void NemoMigrateHash(const std::string& ip, const int port,
       }
       hash_num += fvs.size() >> 1; 		
       for (auto it = fvs.begin(); it != fvs.end(); it += 2) {
-	//std::cout << "hset " << *iter << " " << *it << " " << *(it+1) << std::endl;
-        status_nemo = db->HSet(*iter, *it, *(it+1));
+	//std::cout << "hset " << *iter << " " << *it << " " << *(it + 1) << std::endl;
+        status_nemo = db->HSet(*iter, *it, *(it + 1));
         if (!status_nemo.ok()) {
           std::cout << "Hash client hset error, key: " << *iter << std::endl;
           delete client;
@@ -653,7 +653,7 @@ void NemoMigrateQueue(const std::string& ip, const int port,
 
   int64_t start = 0;
   int64_t len = 0;
-  for (auto iter = keys.begin(); iter != keys.end(); iter ++) {
+  for (auto iter = keys.begin(); iter != keys.end(); iter++) {
     start = 0;
     while (true) {
       fs.clear();
@@ -667,7 +667,7 @@ void NemoMigrateQueue(const std::string& ip, const int port,
       if (fs.empty()) {
         break;
       }
-      for (auto it = fs.begin(); it != fs.end(); it ++) {
+      for (auto it = fs.begin(); it != fs.end(); it++) {
 	//std::cout << "rpush " << *iter << " " << *it << " " << std::endl;
         status_nemo = db->RPush(*iter, *it, &len);
         if (!status_nemo.ok()) {
@@ -708,7 +708,7 @@ void NemoMigrateZset(const std::string& ip, const int port,
 
   std::string prev_start_member = "";
   int64_t zadd_res;
-  for (auto iter = keys.begin(); iter != keys.end(); iter ++) {
+  for (auto iter = keys.begin(); iter != keys.end(); iter++) {
     prev_start_member = "";
     while (true) {
       sms.clear();
@@ -724,7 +724,7 @@ void NemoMigrateZset(const std::string& ip, const int port,
       num_zset += sms.size() >> 1;
       for (auto it = sms.begin(); it != sms.end(); it += 2) {
         //std::cout << "zadd " << *iter << " " << *it << " " << *(it+1) << std::endl;
-        status_nemo = db->ZAdd(*iter, stod(*(it+1)), *it, &zadd_res);
+        status_nemo = db->ZAdd(*iter, stod(*(it + 1)), *it, &zadd_res);
         if (!status_nemo.ok()) {
           std::cout << "Zadd client zadd error, key: " << *iter << std::endl;
           delete client;
@@ -784,7 +784,7 @@ void NemoDoKv(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(NemoMigrateKv, ip, port, 
       password, db, std::ref(num_of_kv[thread_num]), prev_start, keys.back());
-    thread_num ++;
+    thread_num++;
     start = prev_start = keys.back();
   }
 
@@ -793,7 +793,7 @@ void NemoDoKv(const std::string& ip, const int port,
     delete threads[i];
   }
   int total_num = 0;
-  for (int i = 0; i < thread_num; i ++) {
+  for (int i = 0; i < thread_num; i++) {
     total_num += num_of_kv[i];
   }
   std::cout << "==========Kv migrate done============" << std::endl;
@@ -825,7 +825,7 @@ void NemoDoHash(const std::string& ip, const int port,
   ssdb::Status status_ssdb;
   std::thread *threads[1000];
   int num_of_hash[1000];
-  for (int i = 0; i < 1000; i ++) {
+  for (int i = 0; i < 1000; i++) {
     num_of_hash[i] = 0;
   }
   int thread_num = 0;
@@ -861,7 +861,7 @@ void NemoDoHash(const std::string& ip, const int port,
      delete threads[i];
   }
   int total_num = 0;
-  for (int i = 0; i < thread_num; i ++) {
+  for (int i = 0; i < thread_num; i++) {
     total_num += num_of_hash[i];
   }
   std::cout << "===============Hash migrate done==============" << std::endl;
@@ -894,7 +894,7 @@ void NemoDoZset(const std::string& ip, const int port,
   ssdb::Status status_ssdb;
   std::thread *threads[1000];
   int num_of_zset[1000];
-  for (int i = 0; i < 1000; i ++) {
+  for (int i = 0; i < 1000; i++) {
     num_of_zset[i] = 0;
   }
   int thread_num = 0;
@@ -920,7 +920,7 @@ void NemoDoZset(const std::string& ip, const int port,
 
     threads[thread_num] = new std::thread(NemoMigrateZset, ip, port, 
                             password, db, keys, std::ref(num_of_zset[thread_num]));
-    thread_num ++;
+    thread_num++;
     start = prev_start = resp->back();
   }
 
@@ -1007,21 +1007,21 @@ void NemoDoQueue(const std::string& ip, const int port,
 }
 
 void Usage() {
-	std::cout << "usage:" << std::endl;
-	std::cout << "	ssdb_to_pika read data from ssdb DB and send it wo nemo or blacbwidow DB" << std::endl;
-	std::cout << "	ssdb_to_pika  host  port  path  form   [password]" <<std::endl;
-	std::cout << "	--host   		ssdb_server_ip_addr" << std::endl;
-	std::cout << "	--port   		ssdb_server_port" << std::endl;
-	std::cout << "	--path 		pika db's path" <<std::endl;
-	std::cout << "	--form   		nemo or blackwidow based on your pika version "<< std::endl;
-	std::cout << "	--[password]  	ssdb_server_password if it has password "<< std::endl;
-	std::cout << "example: ./ssdb_to_pika localhost 8888 ./../db blackwidow" << std::endl;
+  std::cout << "usage:" << std::endl;
+  std::cout << "	ssdb_to_pika read data from ssdb DB and send it wo nemo or blacbwidow DB" << std::endl;
+  std::cout << "	ssdb_to_pika  host  port  path  form   [password]" <<std::endl;
+  std::cout << "	--host   		ssdb_server_ip_addr" << std::endl;
+  std::cout << "	--port   		ssdb_server_port" << std::endl;
+  std::cout << "	--path 		pika db's path" <<std::endl;
+  std::cout << "	--form   		nemo or blackwidow based on your pika version "<< std::endl;
+  std::cout << "	--[password]  	ssdb_server_password if it has password "<< std::endl;
+  std::cout << "example: ./ssdb_to_pika localhost 8888 ./../db blackwidow" << std::endl;
 }
 
 int main(int argc, char** argv) {
   if (argc != 5 && argc != 6) {
-  	Usage();
-    	return -1;
+    Usage();
+    return -1;
   }
   std::string ip = argv[1];
   int port = atoi(argv[2]);
