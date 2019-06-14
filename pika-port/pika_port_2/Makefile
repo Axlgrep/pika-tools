@@ -15,7 +15,7 @@ SRC_DIR = .
 THIRD_PATH = ../../third
 
 # ROCKSDB_LDFLAGS= -lsnappy -lz -lbz2 -llz4 -lzstd
-ROCKSDB_LDFLAGS= -lsnappy  -lgflags -lz -lbz2 -llz4
+ROCKSDB_LDFLAGS= -lsnappy  -lgflags -lz -lbz2
 TCMALLOC_EXTENSION_FLAGS=
 TCMALLOC_LDFLAGS=
 PROCESSOR_NUMS=2

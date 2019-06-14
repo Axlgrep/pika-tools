@@ -15,7 +15,7 @@ STATIC_LIBS = ./libssdb-client.a \
 					    ../third/nemo-rocksdb/lib/libnemodb.a \
 					    ../third/rocksdb/librocksdb.a
 
-LIBS = -lrt -pthread -llz4 -lsnappy -lbz2 -lz
+LIBS = -lrt -pthread -lsnappy -lbz2 -lz
 LIBS += $(ROCKSDB_LDFLAGS)
 
 .PHONY: all clean

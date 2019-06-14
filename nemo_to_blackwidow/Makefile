@@ -58,7 +58,6 @@ LIBS         = -lnemo                           \
                -lglog                           \
                -lgflags                         \
                -lrt                             \
-               -llz4                            \
 
 SOURCE := $(wildcard $(SRC_PATH)/*.cc)
 OBJS := $(patsubst %.cc, %.o, $(SOURCE))

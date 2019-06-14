@@ -38,7 +38,8 @@ void PikaSender::ConnectRedis() {
     slash::Status s = cli_->Connect(ip_, port_);
     if (!s.ok()) {
       cli_ = NULL;
-      LOG(INFO) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
+      LOG(WARNING) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
+      sleep(3);
       continue;
     } else {
       // Connect success

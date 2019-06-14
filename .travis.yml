@@ -7,7 +7,7 @@ os:
 
 addons:
   apt:
-    packages: ['libsnappy-dev', 'libprotobuf-dev', 'libgoogle-glog-dev', 'liblz4-dev']
+    packages: ['libsnappy-dev', 'libprotobuf-dev', 'libgoogle-glog-dev']
 
 compiler:
   - gcc
