@@ -8,12 +8,17 @@ INCLUDE_PATH = -I./ \
 							 -I../third/nemo/include \
 							 -I../third/nemo-rocksdb/include \
 							 -I../third/rocksdb \
-							 -I../third/rocksdb/include
+							 -I../third/rocksdb/include \
+							 -I../third/blackwidow/include/blackwidow \
+							 -I../third/blackwidow \
+							 -I../third/slash
 
 STATIC_LIBS = ./libssdb-client.a \
 					    ../third/nemo/lib/libnemo.a \
 					    ../third/nemo-rocksdb/lib/libnemodb.a \
-					    ../third/rocksdb/librocksdb.a
+					    ../third/rocksdb/librocksdb.a \
+					    ../third/blackwidow/lib/libblackwidow.a \
+					    ../third/slash/slash/lib/libslash.a
 
 LIBS = -lrt -pthread -lsnappy -lbz2 -lz
 LIBS += $(ROCKSDB_LDFLAGS)
