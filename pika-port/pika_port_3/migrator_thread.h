@@ -12,11 +12,11 @@ class MigratorThread : public pink::Thread {
  public:
   MigratorThread(void *db, std::vector<PikaSender *> *senders, int type, int thread_num) :
       db_(db),
+      should_exit_(false),
       senders_(senders),
       type_(type),
       thread_num_(thread_num),
       thread_index_(0),
-	  should_exit_(false),
       num_(0) {
   }
 

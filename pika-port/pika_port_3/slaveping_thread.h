@@ -12,7 +12,7 @@
 #include "slash/include/slash_mutex.h"
 #include "slash/include/slash_status.h"
 
-#include "log.h"
+#include <glog/logging.h>
 
 using slash::Status;
 
@@ -26,7 +26,7 @@ public:
   virtual ~SlavepingThread() {
     StopThread();
     delete cli_;
-    pinfo(" Slaveping thread %llu exit!!!", pthread_self());
+    LOG(INFO) << " Slaveping thread " << pthread_self() << " exit!!!";
   };
 
   Status Send();

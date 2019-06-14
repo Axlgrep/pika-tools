@@ -11,7 +11,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "log.h"
+#include <glog/logging.h>
+
 #include "pika_port.h"
 #include "conf.h"
 
@@ -29,16 +30,16 @@ static int lockFile(int fd) {
   return fcntl(fd, F_SETLK, &lock);
 }
 
-static void createPidFile(const char *file) {
+static void createPidFile(const char* file) {
   int fd = open(file, O_RDWR | O_CREAT | O_DIRECT, S_IRUSR | S_IWUSR);
   if (-1 == fd) {
-    pfatal("open(%s) = %d, error:%m", file, fd);
+    LOG(FATAL) << "open(" << file << ") = " << fd;
   }
 
   int ret = lockFile(fd);
   if (ret < 0) {
     close(fd);
-    pfatal("lock(%d) = %d, error:%m", fd, ret);
+    LOG(FATAL) << "lock(" << fd << ") = " << ret;
   }
 
   // int pid = (int)(getpid());
@@ -61,7 +62,7 @@ static void close_std() {
 }
 
 static void IntSigHandle(const int sig) {
-  pinfo("Catch Signal %d, cleanup...", sig);
+  LOG(INFO) << "Catch Signal " << sig << ", cleanup...";
   if (2 < pidFileFd) {
     close(pidFileFd);
   }
@@ -74,6 +75,20 @@ static void SignalSetup() {
   signal(SIGINT, &IntSigHandle);
   signal(SIGQUIT, &IntSigHandle);
   signal(SIGTERM, &IntSigHandle);
+}
+
+static void GlogInit(const std::string& log_path, bool is_daemon) {
+  if (!slash::FileExists(log_path)) {
+    slash::CreatePath(log_path);
+  }
+
+  if (!is_daemon) {
+    FLAGS_alsologtostderr = true;
+  }
+
+  FLAGS_log_dir = log_path;
+  FLAGS_max_log_size = 2048;   // log file 2GB
+  ::google::InitGoogleLogging("pika_port_3");
 }
 
 static void Usage()
@@ -210,13 +225,15 @@ int main(int argc, char *argv[])
     }
   }
 
+  GlogInit(g_conf.log_path, is_daemon);
+
   if (g_conf.local_port == 0) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<int> di(10000, 40000);
     // g_conf.local_port = di(mt);
     g_conf.local_port = 21333;
-    pinfo("Use random port: %d", g_conf.local_port);
+    LOG(INFO) << "Use random port: " << g_conf.local_port;
   }
 
   std::cout << "local_ip:" << g_conf.local_ip << " "

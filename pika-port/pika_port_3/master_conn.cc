@@ -4,6 +4,8 @@
 // of patent rights can be found in the PATENTS file in the same directory.
 
 
+#include <glog/logging.h>
+
 #include "slash/include/slash_string.h"
 #include "slash/include/slash_coding.h"
 
@@ -11,7 +13,6 @@
 #include "const.h"
 #include "master_conn.h"
 #include "binlog_receiver_thread.h"
-#include "log.h"
 #include "pika_port.h"
 
 extern PikaPort *g_pika_port;
@@ -70,9 +71,8 @@ pink::ReadStatus MasterConn::ReadBody(uint32_t body_length) {
   if (rbuf_len_ == HEADER_LEN + body_length) {
     return pink::kReadAll;
   } else if (rbuf_len_ > HEADER_LEN + body_length) {
-    pinfo("rbuf_len_ larger than sum of header length "
-	  "(6 Byte) and body_length, rbuf_len_:%u, body_length:%u",
-	  rbuf_len_, body_length);
+    LOG(INFO) << "rbuf_len_ larger than sum of header length (6 Byte)"
+      <<  " and body_length, rbuf_len_: " << rbuf_len_ << ", body_length: " << body_length;
   }
 
   pink::ReadStatus status = ReadRaw(body_length);
@@ -118,14 +118,14 @@ pink::ReadStatus MasterConn::ParseRedisRESPArray(const std::string& content, pin
   int32_t content_len = content.size();
   long multibulk_len = 0, bulk_len = 0;
   if (content.empty() || content[0] != '*') {
-    pinfo("Content empty() or the first character of the redis protocol string not equal '*'");
+    LOG(INFO) << "Content empty() or the first character of the redis protocol string not equal '*'";
     return pink::kParseError;
   }
   pos = FindNextSeparators(content, next_parse_pos);
   if (pos != -1 && GetNextNum(content, next_parse_pos, pos, &multibulk_len) != -1) {
     next_parse_pos = pos + 1;
   } else {
-    pinfo("Find next separators error or get next num error");
+    LOG(INFO) << "Find next separators error or get next num error";
     return pink::kParseError;
   }
 
@@ -138,7 +138,7 @@ pink::ReadStatus MasterConn::ParseRedisRESPArray(const std::string& content, pin
   argv->clear();
   while (multibulk_len) {
     if (content[next_parse_pos] != '$') {
-      pinfo("The first charactor of the RESP type element not equal '$'");
+      LOG(INFO) << "The first charactor of the RESP type element not equal '$'";
       return pink::kParseError;
     }
 
@@ -154,12 +154,12 @@ pink::ReadStatus MasterConn::ParseRedisRESPArray(const std::string& content, pin
         multibulk_len--;
       }
     } else {
-      pinfo("Find next separators error or get next num error");
+      LOG(INFO) << "Find next separators error or get next num error";
       return pink::kParseError;
     }
   }
   if (content_len != next_parse_pos) {
-    pinfo("Incomplete parse");
+    LOG(INFO) << "Incomplete parse";
     return pink::kParseError;
   } else {
     return pink::kOk;
@@ -187,7 +187,7 @@ pink::ReadStatus MasterConn::GetRequest() {
   slash::GetFixed32(&header, &body_length);
 
   if (type != kTypePortAuth && type != kTypePortBinlog) {
-    pinfo("Unrecognizable Type: %u maybe identify binlog type error", type);
+    LOG(INFO) << "Unrecognizable Type: " << type << " maybe identify binlog type error";
     return pink::kParseError;
   }
 
@@ -211,7 +211,7 @@ pink::ReadStatus MasterConn::GetRequest() {
   std::string body(rbuf_ + HEADER_LEN, body_length);
   if (type == kTypePortAuth) {
     if ((status = ParseRedisRESPArray(body, &argv)) != pink::kOk) {
-      pinfo("Type auth ParseRedisRESPArray error");
+      LOG(INFO) << "Type auth ParseRedisRESPArray error";
       return status;
     }
     if (!ProcessAuth(argv)) {
@@ -220,18 +220,18 @@ pink::ReadStatus MasterConn::GetRequest() {
   } else if (type == kTypePortBinlog) {
     PortBinlogItem item;
     if (!PortBinlogTransverter::PortBinlogDecode(PortTypeFirst, body, &item)) {
-      pinfo("Binlog decode error: %s", item.ToString().c_str());
+      LOG(INFO) << "Binlog decode error: " << item.ToString();
       return pink::kParseError;
     }
     if ((status = ParseRedisRESPArray(item.content(), &argv)) != pink::kOk) {
-      pinfo("Type Binlog ParseRedisRESPArray error: %s", item.ToString().c_str());
+      LOG(INFO) << "Type Binlog ParseRedisRESPArray error: " << item.ToString();
       return status;
     }
     if (!ProcessBinlogData(argv, item)) {
       return pink::kDealError;
     }
   } else {
-    pinfo("Unrecognizable Type");
+    LOG(INFO) << "Unrecognizable Type";
     return pink::kParseError;
   }
 
@@ -255,21 +255,21 @@ bool MasterConn::ProcessAuth(const pink::RedisCmdArgsType& argv) {
   if (argv[0] == "auth") {
     if (argv[1] == std::to_string(g_pika_port->sid())) {
       is_authed_ = true;
-      pinfo("BinlogReceiverThread AccessHandle succeeded, My server id: %d, Master auth server id:%s",
-        g_pika_port->sid(), argv[1].c_str());
+      LOG(INFO) << "BinlogReceiverThread AccessHandle succeeded, My server id: "
+        << g_pika_port->sid() << ", Master auth server id: " << argv[1];
       return true;
     }
   }
 
-  pinfo("BinlogReceiverThread AccessHandle failed, My server id: %ld, Master auth server id:%s",
-    g_pika_port->sid(), argv[1].c_str());
+  LOG(INFO) << "BinlogReceiverThread AccessHandle failed, My server id: "
+    << g_pika_port->sid() << ", Master auth server id: " << argv[1];
 
   return false;
 }
 
 bool MasterConn::ProcessBinlogData(const pink::RedisCmdArgsType& argv, const PortBinlogItem& binlog_item) {
   if (!is_authed_) {
-    pinfo("Need Auth First");
+    LOG(INFO) << "Need Auth First";
     return false;
   } else if (argv.empty()) {
     return false;
@@ -281,7 +281,7 @@ bool MasterConn::ProcessBinlogData(const pink::RedisCmdArgsType& argv, const Por
   }
   int ret = g_pika_port->SendRedisCommand(binlog_item.content(), key);
   if (ret != 0) {
-    pwarn("send redis command:%s, ret:%d", binlog_item.ToString().c_str(), ret);
+    LOG(WARNING) << "send redis command:" << binlog_item.ToString() << ", ret:" << ret;
   }
 
   return true;

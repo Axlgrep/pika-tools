@@ -3,11 +3,10 @@
 // LICENSE file in the root directory of this source tree. An additional grant
 // of patent rights can be found in the PATENTS file in the same directory.
 
-// #include <glog/logging.h>
+#include <glog/logging.h>
 #include <poll.h>
 #include "slaveping_thread.h"
 #include "pika_port.h"
-#include "log.h"
 
 extern PikaPort* g_pika_port;
 
@@ -21,7 +20,7 @@ Status SlavepingThread::Send() {
     argv.push_back(std::to_string(sid_));
     pink::SerializeRedisCommand(argv, &wbuf_str);
     is_first_send_ = false;
-    pinfo("%s", wbuf_str.c_str());
+    LOG(INFO) << wbuf_str;
   }
 
   return cli_->Send(&wbuf_str);
@@ -38,7 +37,7 @@ Status SlavepingThread::RecvProc() {
       s = Status::Corruption("");
     }
   } else {
-    pinfo("RecvProc, recv error: %s", s.ToString().c_str());
+    LOG(INFO) << "RecvProc, recv error: " << s.ToString();
   }
   return s;
 }
@@ -63,7 +62,7 @@ void* SlavepingThread::ThreadMain() {
       g_pika_port->PlusMasterConnection();
       while (true) {
         if (should_stop()) {
-          pinfo("Close Slaveping Thread now");
+          LOG(INFO) << "Close Slaveping Thread now";
           close(cli_->fd());
           g_pika_port->binlog_receiver_thread()->KillBinlogSender();
           break;
@@ -74,20 +73,19 @@ void* SlavepingThread::ThreadMain() {
           s = RecvProc();
         }
         if (s.ok()) {
-          // pinfo("Ping master success");
           gettimeofday(&last_interaction, NULL);
         } else if (s.IsTimeout()) {
-          pwarn("Slaveping timeout once");
+          LOG(WARNING) << "Slaveping timeout once";
           gettimeofday(&now, NULL);
           if (now.tv_sec - last_interaction.tv_sec > 30) {
             //timeout;
-            pinfo("Ping master timeout");
+            LOG(INFO) << "Ping master timeout";
             close(cli_->fd());
             g_pika_port->binlog_receiver_thread()->KillBinlogSender();
             break;
           }
         } else {
-          perror("Ping master error");
+          LOG(WARNING) << "Ping master error";
           close(cli_->fd());
           g_pika_port->binlog_receiver_thread()->KillBinlogSender();
           break;
@@ -96,9 +94,9 @@ void* SlavepingThread::ThreadMain() {
       }
       g_pika_port->MinusMasterConnection();
     } else if (!should_stop()) {
-      pwarn("Slaveping, Connect timeout");
+      LOG(WARNING) << "Slaveping, Connect timeout";
       if ((++connect_retry_times) >= 30) {
-        pwarn("Slaveping, Connect timeout 10 times, disconnect with master");
+        LOG(WARNING) << "Slaveping, Connect timeout 10 times, disconnect with master";
         close(cli_->fd());
         g_pika_port->binlog_receiver_thread()->KillBinlogSender();
         connect_retry_times = 0;

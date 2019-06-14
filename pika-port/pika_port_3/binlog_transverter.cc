@@ -4,7 +4,7 @@
 // of patent rights can be found in the PATENTS file in the same directory.
 
 #include "binlog_transverter.h"
-#include "log.h"
+#include <glog/logging.h>
 
 uint32_t PortBinlogItem::exec_time() const {
   return exec_time_;
@@ -98,7 +98,8 @@ bool PortBinlogTransverter::PortBinlogDecode(PortBinlogType type, const std::str
   std::string binlog_str = binlog;
   slash::GetFixed16(&binlog_str, &binlog_type);
   if (binlog_type != type) {
-    perror("PortBinlog Item type error, expect type:%u actualy type:%u", type, binlog_type);
+    LOG(WARNING) << "PortBinlog Item type error, expect type: "
+      << static_cast<uint16_t>(type) << " actualy type: " << binlog_type;
     return false;
   }
   slash::GetFixed32(&binlog_str, &binlog_item->exec_time_);
@@ -110,8 +111,8 @@ bool PortBinlogTransverter::PortBinlogDecode(PortBinlogType type, const std::str
   if (binlog_str.size() >= content_length) {
     binlog_item->content_.assign(binlog_str.data(), content_length);
   } else {
-    perror("PortBinlog Item get content error, expect length:%u, left length:%u",
-	  content_length, binlog_str.size());
+    LOG(WARNING) << "PortBinlog Item get content error, expect length: "
+      << content_length << ", left length: " << binlog_str.size();
     return false;
   }
   binlog_str.erase(0, content_length);

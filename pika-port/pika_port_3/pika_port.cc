@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 
 #include <functional>
-#include "log.h"
+#include <glog/logging.h>
 
 #include "slash/include/env.h"
 #include "slash/include/slash_string.h"
@@ -21,7 +21,7 @@
 #include "conf.h"
 
 PikaPort::PikaPort(std::string& master_ip, int master_port, std::string& passwd)
-  : sid_(0),
+  :
   ping_thread_(NULL), 
   master_ip_(master_ip),
   master_port_(master_port),
@@ -30,7 +30,8 @@ PikaPort::PikaPort(std::string& master_ip, int master_port, std::string& passwd)
   repl_state_(PIKA_REPL_NO_CONNECT),
   requirepass_(passwd),
   // cli_(NULL),
-  should_exit_(false) {
+  should_exit_(false),
+  sid_(0) {
 
   pthread_rwlockattr_t attr;
   pthread_rwlockattr_init(&attr);
@@ -39,7 +40,7 @@ PikaPort::PikaPort(std::string& master_ip, int master_port, std::string& passwd)
   
   //Init ip host
   if (!Init()) {
-    pfatal("Init iotcl error");
+    LOG(FATAL) << "Init iotcl error";
   }
 
   // Create redis sender 
@@ -59,7 +60,7 @@ PikaPort::PikaPort(std::string& master_ip, int master_port, std::string& passwd)
 }
 
 PikaPort::~PikaPort() {
-  pinfo("Ending...");
+  LOG(INFO) << "Ending...";
   delete trysync_thread_;
   delete ping_thread_;
   sleep(1);
@@ -71,7 +72,7 @@ PikaPort::~PikaPort() {
   pthread_rwlock_destroy(&state_protector_);
   pthread_rwlock_destroy(&rwlock_);
 
-  pinfo("PikaPort %ul exit!!!", pthread_self());
+  LOG(INFO) << "PikaPort "<< pthread_self() << " exit!!!";
 }
 
 bool PikaPort::Init() {
@@ -98,8 +99,8 @@ void PikaPort::Cleanup() {
     replies += senders_[i]->elements();
     delete senders_[i];
   }
-  pinfo("=============== Syncing =====================");
-  pinfo("Total replies : %lld received from redis server", replies);
+  LOG(INFO) << "=============== Syncing =====================";
+  LOG(INFO) << "Total replies : " << replies << " received from redis server";
 
   delete this; // PikaPort is a global object
   // ::google::ShutdownGoogleLogging();
@@ -125,7 +126,7 @@ void PikaPort::Start() {
   mutex_.Lock();
   mutex_.Lock();
   mutex_.Unlock();
-  pinfo("Goodbye...");
+  LOG(INFO) << "Goodbye...";
   Cleanup();
 }
 
@@ -149,7 +150,7 @@ bool PikaPort::SetMaster(std::string& master_ip, int master_port) {
     // role_ |= PIKA_ROLE_SLAVE;
     role_ = PIKA_ROLE_PORT;
     repl_state_ = PIKA_REPL_CONNECT;
-    pinfo("set role_ = PIKA_ROLE_PORT, repl_state_ = PIKA_REPL_CONNECT");
+    LOG(INFO) << "set role_ = PIKA_ROLE_PORT, repl_state_ = PIKA_REPL_CONNECT";
     return true;
   }
 
@@ -176,8 +177,8 @@ void PikaPort::ConnectMasterDone() {
 
 bool PikaPort::ShouldStartPingMaster() {
   slash::RWLock l(&state_protector_, false);
-  pinfo("ShouldStartPingMaster: master_connection %d, repl_state %s",
-	master_connection_, PikaState(repl_state_).c_str());
+  LOG(INFO) << "ShouldStartPingMaster: master_connection "
+    << master_connection_ << ", repl_state " << PikaState(repl_state_);
   if (repl_state_ == PIKA_REPL_CONNECTING && master_connection_ < 2) {
     return true;
   }
@@ -208,7 +209,7 @@ void PikaPort::PlusMasterConnection() {
     if ((++master_connection_) >= 2) {
       // two connection with master has been established
       repl_state_ = PIKA_REPL_CONNECTED;
-      pinfo("Start Sync...");
+      LOG(INFO) << "Start Sync...";
       master_connection_ = 2;
     }
   }
@@ -216,8 +217,8 @@ void PikaPort::PlusMasterConnection() {
 
 bool PikaPort::ShouldAccessConnAsMaster(const std::string& ip) {
   slash::RWLock l(&state_protector_, false);
-  pinfo("ShouldAccessConnAsMaster, repl_state_: %s, ip:%s, master_ip:%s",
-		PikaState(repl_state_).c_str(), ip.c_str(), master_ip_.c_str());
+  LOG(INFO) << "ShouldAccessConnAsMaster, repl_state_: "
+    << PikaState(repl_state_) << ", ip: " << ip << ", master_ip: " << master_ip_;
   if (repl_state_ != PIKA_REPL_NO_CONNECT && ip == master_ip_) {
     return true;
   }
@@ -235,7 +236,7 @@ void PikaPort::RemoveMaster() {
   if (ping_thread_ != NULL) {
     int err = ping_thread_->StopThread();
     if (err != 0) {
-      pwarn("can't join thread %s", strerror(err));
+      LOG(WARNING) << "can't join thread " << strerror(err);
     }
     delete ping_thread_;
     ping_thread_ = NULL;
@@ -244,8 +245,6 @@ void PikaPort::RemoveMaster() {
 
 bool PikaPort::IsWaitingDBSync() {
   slash::RWLock l(&state_protector_, false);
-  // pinfo("repl_state: " << PikaState(repl_state_)
-  //     << " role: " << PikaRole(role_) << " master_connection: " << master_connection_;
   if (repl_state_ == PIKA_REPL_WAIT_DBSYNC) {
     return true;
   }

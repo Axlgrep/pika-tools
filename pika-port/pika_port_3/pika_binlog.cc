@@ -12,8 +12,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#include <glog/logging.h>
+
 #include "slash/include/slash_mutex.h"
-#include "log.h"
 
 using slash::RWLock;
 
@@ -97,24 +98,24 @@ Binlog::Binlog(const std::string& binlog_path, const int file_size) :
   std::string profile;
 
   if (!slash::FileExists(manifest)) {
-    pinfo("Binlog: Manifest file not exist, we create a new one.");
+    LOG(INFO) << "Binlog: Manifest file not exist, we create a new one.";
 
     profile = NewFileName(filename, pro_num_);
     s = slash::NewWritableFile(profile, &queue_);
     if (!s.ok()) {
-      pfatal("Binlog: NewWritableFile(%s) = %s", filename.c_str(), s.ToString().c_str());
+      LOG(FATAL) << "Binlog: NewWritableFile(" << filename << ") = " << s.ToString();
     }
 
 
     s = slash::NewRWFile(manifest, &versionfile_);
     if (!s.ok()) {
-      pfatal("Binlog: new versionfile error %s", s.ToString().c_str());
+      LOG(FATAL) << "Binlog: new versionfile error " << s.ToString();
     }
 
     version_ = new Version(versionfile_);
     version_->StableSave();
   } else {
-    pinfo("Binlog: Find the exist file.");
+    LOG(INFO) << "Binlog: Find the exist file.";
 
     s = slash::NewRWFile(manifest, &versionfile_);
     if (s.ok()) {
@@ -125,18 +126,18 @@ Binlog::Binlog(const std::string& binlog_path, const int file_size) :
       // Debug
       //version_->debug();
     } else {
-      pfatal("Binlog: open versionfile error");
+      LOG(FATAL) << "Binlog: open versionfile error";
     }
 
     profile = NewFileName(filename, pro_num_);
-    pinfo("Binlog: open profile %s", profile.c_str());
+    LOG(INFO) << "Binlog: open profile " << profile;
     s = slash::AppendWritableFile(profile, &queue_, version_->pro_offset_);
     if (!s.ok()) {
-      pfatal("Binlog: Open file %s error %s", profile.c_str(), s.ToString().c_str());
+      LOG(FATAL) << "Binlog: Open file " << profile << " error " << s.ToString();
     }
 
     uint64_t filesize = queue_->Filesize();
-    pinfo("Binlog: filesize is %llu", filesize);
+    LOG(INFO) << "Binlog: filesize is " << filesize;
   }
 
   InitLogFile();

@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <functional>
+#include <glog/logging.h>
 
 #include "blackwidow/blackwidow.h"
 #include "src/redis_strings.h"
@@ -14,8 +15,6 @@
 #include "src/redis_zsets.h"
 #include "src/scope_snapshot.h"
 #include "src/strings_value_format.h"
-
-#include "log.h"
 
 const int64_t MAX_BATCH_NUM = 30000;
 
@@ -33,7 +32,7 @@ void MigratorThread::MigrateStringsDB() {
   iterator_options.fill_cache = false;
   int64_t curtime;
   if (!rocksDB->GetEnv()->GetCurrentTime(&curtime).ok()) {
-    pwarn("failed to get current time by db->GetEnv()->GetCurrentTime()");
+    LOG(WARNING) << "failed to get current time by db->GetEnv()->GetCurrentTime()";
     return;
   }
 
@@ -80,12 +79,6 @@ void MigratorThread::MigrateStringsDB() {
 void MigratorThread::MigrateListsDB() {
   blackwidow::RedisLists* db = (blackwidow::RedisLists*)(db_);
 
-  // std::vector<std::string> keys;
-  // blackwidow::Status s = db->ScanKeys(pattern, &keys);
-  // if (!s.ok()) {
-  //   pfatal("db->ScanKeys(pattern:*) = %s", s.ToString().c_str());
-  //   return;
-  // }
   std::string start_key;
   std::string next_key;
   std::string pattern("*");
@@ -103,7 +96,7 @@ void MigratorThread::MigrateListsDB() {
     int64_t count = batch_count;
     std::vector<std::string> keys;
     fin = db->Scan(start_key, pattern, &keys, &count, &next_key);
-    // pinfo("batch count %d, fin:%d, keys.size():%zu, next_key:%s\n", count, fin, keys.size(), next_key.c_str());
+    //LOG(INFO) << "batch count: " << count << ", fin: " << fin << ", keys.size(): " << keys.size() << ", next_key: " << next_key;
     if (fin && keys.size() == 0) {
       break;
     }
@@ -118,8 +111,8 @@ void MigratorThread::MigrateListsDB() {
       std::vector<std::string> list;
       blackwidow::Status s = db->LRange(k, pos, pos + g_conf.sync_batch_num - 1, &list);
       if (!s.ok()) {
-        pwarn("db->LRange(key:%s, pos:%lld, batch size:%zu) = %s",
-          k.c_str(), pos, g_conf.sync_batch_num, s.ToString().c_str());
+        LOG(WARNING) << "db->LRange(key:" << k << ", pos:" << pos
+          << ", batch size: " << g_conf.sync_batch_num << ") = " << s.ToString();
         continue;
       }
 
@@ -143,8 +136,8 @@ void MigratorThread::MigrateListsDB() {
         list.clear();
         s = db->LRange(k, pos, pos + g_conf.sync_batch_num - 1, &list);
         if (!s.ok()) {
-          pwarn("db->LRange(key:%s, pos:%lld, batch size:%zu) = %s",
-            k.c_str(), pos, g_conf.sync_batch_num, s.ToString().c_str());
+          LOG(WARNING) << "db->LRange(key:" << k << ", pos:" << pos
+            << ", batch size:" << g_conf.sync_batch_num << ") = " << s.ToString();
         }
       }
 
@@ -167,14 +160,6 @@ void MigratorThread::MigrateListsDB() {
 
 void MigratorThread::MigrateHashesDB() {
   blackwidow::RedisHashes* db = (blackwidow::RedisHashes*)(db_);
-
-  // std::vector<std::string> keys;
-  // std::string pattern("*");
-  // blackwidow::Status s = db->ScanKeys(pattern, &keys);
-  // if (!s.ok()) {
-  //   pfatal("db->ScanKeys(pattern:*) = %s", s.ToString().c_str());
-  //   return;
-  // }
 
   std::string start_key;
   std::string next_key;
@@ -204,7 +189,7 @@ void MigratorThread::MigrateHashesDB() {
       std::vector<blackwidow::FieldValue> fvs;
       blackwidow::Status s = db->HGetall(k, &fvs);
       if (!s.ok()) {
-        pwarn("db->HGetall(key:%s) = %s", k.c_str(), s.ToString().c_str());
+        LOG(WARNING) << "db->HGetall(key:" << k << ") = " << s.ToString();
         continue;
       }
 
@@ -249,14 +234,6 @@ void MigratorThread::MigrateHashesDB() {
 void MigratorThread::MigrateSetsDB() {
   blackwidow::RedisSets* db = (blackwidow::RedisSets*)(db_);
 
-  // std::vector<std::string> keys;
-  // std::string pattern("*");
-  // blackwidow::Status s = db->ScanKeys(pattern, &keys);
-  // if (!s.ok()) {
-  //   pfatal("db->ScanKeys(pattern:*) = %s", s.ToString().c_str());
-  //   return;
-  // }
-
   std::string start_key;
   std::string next_key;
   std::string pattern("*");
@@ -285,7 +262,7 @@ void MigratorThread::MigrateSetsDB() {
       std::vector<std::string> members;
       blackwidow::Status s = db->SMembers(k, &members);
       if (!s.ok()) {
-        pwarn("db->SMembers(key:%s) = %s", k.c_str(), s.ToString().c_str());
+        LOG(WARNING) << "db->SMembers(key:" << k << ") = " << s.ToString();
         continue;
       }
       auto it = members.begin();
@@ -327,14 +304,6 @@ void MigratorThread::MigrateSetsDB() {
 void MigratorThread::MigrateZsetsDB() {
   blackwidow::RedisZSets* db = (blackwidow::RedisZSets*)(db_);
 
-  // std::vector<std::string> keys;
-  // std::string pattern("*");
-  // blackwidow::Status s = db->ScanKeys(pattern, &keys);
-  // if (!s.ok()) {
-  //   pfatal("db->ScanKeys(pattern:*) = %s", s.ToString().c_str());
-  //   return;
-  // }
-
   std::string start_key;
   std::string next_key;
   std::string pattern("*");
@@ -363,7 +332,7 @@ void MigratorThread::MigrateZsetsDB() {
       std::vector<blackwidow::ScoreMember> score_members;
       blackwidow::Status s = db->ZRange(k, 0, -1, &score_members);
       if (!s.ok()) {
-        pwarn("db->ZRange(key:%s) = %s", k.c_str(), s.ToString().c_str());
+        LOG(WARNING) << "db->ZRange(key:" << k << ") = " << s.ToString();
         continue;
       }
       auto it = score_members.begin();
@@ -432,7 +401,7 @@ void MigratorThread::MigrateDB() {
     }
 
     default: {
-      perror("illegal db type %d", type_);
+      LOG(WARNING) << "illegal db type " << type_;
       break;
     }
   }
@@ -450,8 +419,7 @@ void MigratorThread::DispatchKey(const std::string &command, const std::string& 
 void *MigratorThread::ThreadMain() {
   MigrateDB();
   should_exit_ = true;
-
-  pinfo("%s keys have been dispatched completly", GetDBTypeString(type_));
+  LOG(INFO) << GetDBTypeString(type_) << " keys have been dispatched completly";
   return NULL;
 }
 

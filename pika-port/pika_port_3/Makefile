@@ -37,7 +37,7 @@ LIB_PATH = -L./ \
   -L$(THIRD_PATH)/pink/pink/lib \
   -L$(THIRD_PATH)/blackwidow/lib
 
-LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lz -lbz2 -llz4
+LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lglog -lgflags -lsnappy -lz -lbz2 -llz4
 # -lzstd
 # LIBS = -Wl,-Bstatic -lrocksdb -Wl,-Bdynamic -lpthread -lrt -lpink -lslash -lblackwidow -lrocksdb -lsnappy -lgflags -lz -lbz2
 
@@ -57,7 +57,7 @@ all: $(OBJECT)
 
 
 $(OBJECT): $(ROCKSDB) $(SLASH) $(PINK) $(BLACKWIDOW) $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(INCLUDE_PATH) $(LIB_PATH)  $(LFLAGS) $(LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(INCLUDE_PATH) $(LIB_PATH) $(LFLAGS) $(LIBS)
 
 $(OBJS): %.o : %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(INCLUDE_PATH)

@@ -4,7 +4,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "log.h"
+#include <glog/logging.h>
+
 #include "slash/include/xdebug.h"
 
 static time_t kCheckDiff = 1;
@@ -24,7 +25,7 @@ RedisSender::RedisSender(int id, std::string ip, int64_t port, std::string passw
 }
 
 RedisSender::~RedisSender() {
-  pinfo("RedisSender thread %d exit!!!", id_);
+  LOG(INFO) << "RedisSender thread " << id_ << " exit!!!";
 }
 
 void RedisSender::ConnectRedis() {
@@ -37,11 +38,11 @@ void RedisSender::ConnectRedis() {
     slash::Status s = cli_->Connect(ip_, port_);
     if (!s.ok()) {
       cli_ = NULL;
-      log_info("Can not connect to %s:%d: %s", ip_.data(), port_, s.ToString().data());
+      LOG(INFO) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
       continue;
     } else {
       // Connect success
-      log_info("Connect to %s:%d:%s", ip_.data(), port_, s.ToString().data());
+      LOG(INFO) << "Connect to " << ip_ << ":" << port_ << " success";
 
       // Authentication
       if (!password_.empty()) {
@@ -56,17 +57,17 @@ void RedisSender::ConnectRedis() {
         if (s.ok()) {
           s = cli_->Recv(&resp);
           if (resp[0] == "OK") {
-            log_info("Authentic success");
+            LOG(INFO) << "Authentic success";
           } else {
             cli_->Close();
-            log_warn("Invalid password");
+            LOG(WARNING) << "Invalid password";
             cli_ = NULL;
             should_exit_ = true;
             return;
           }
         } else {
           cli_->Close();
-          log_info("%s", s.ToString().data());
+          LOG(INFO) << s.ToString();
           cli_ = NULL;
           continue;
         }
@@ -84,14 +85,14 @@ void RedisSender::ConnectRedis() {
           if (s.ok()) {
             if (resp[0] == "NOAUTH Authentication required.") {
               cli_->Close();
-              log_warn("Authentication required");
+              LOG(WARNING) << "Authentication required";
               cli_ = NULL;
               should_exit_ = true;
               return;
             }
           } else {
             cli_->Close();
-            log_info("%s", s.ToString().data());
+            LOG(INFO) << s.ToString();
             cli_ = NULL;
           }
         }
@@ -117,7 +118,7 @@ void RedisSender::SendRedisCommand(const std::string &command) {
     return;
   }
 
-  //pwarn("%d commands queue size is beyond 100000", id_);
+  //LOG(WARNING) << id_ << "commands queue size is beyond 100000";
   while (commands_queue_.size() > 100000) {
     wsignal_.Wait();
   }
@@ -144,9 +145,9 @@ int RedisSender::SendCommand(std::string &command) {
       return 0;
     }
 
-    pwarn("RedisSender %d fails to send redis command %s, times:%d", id_, command.c_str(), idx+1);
+    LOG(WARNING) << "RedisSender " << id_ << "fails to send redis command " << command << ", times: " << idx + 1;
     cli_->Close();
-    log_info("%s", s.ToString().data());
+    LOG(INFO) << s.ToString();
     cli_ = NULL;
     ConnectRedis();
   } while(++idx < 3);
@@ -155,7 +156,7 @@ int RedisSender::SendCommand(std::string &command) {
 }
 
 void *RedisSender::ThreadMain() {
-  pinfo("Start sender %d thread...", id_);
+  LOG(INFO) << "Start sender " << id_ << " thread...";
   // sleep(15);
   int cnt = 0;
   int ret = 0;
@@ -206,7 +207,7 @@ void *RedisSender::ThreadMain() {
 
   delete cli_;
   cli_ = NULL;
-  pinfo("RedisSender thread %d complete", id_);
+  LOG(INFO) << "RedisSender thread " << id_ << " complete";
   return NULL;
 }
 

@@ -3,7 +3,7 @@
 // LICENSE file in the root directory of this source tree. An additional grant
 // of patent rights can be found in the PATENTS file in the same directory.
 
-// #include <glog/logging.h>
+#include <glog/logging.h>
 
 #include "pink/include/pink_conn.h"
 #include "binlog_receiver_thread.h"
@@ -26,7 +26,7 @@ BinlogReceiverThread::BinlogReceiverThread(std::string host, int port, int cron_
 
 BinlogReceiverThread::~BinlogReceiverThread() {
   thread_rep_->StopThread();
-  pinfo("BinlogReceiver thread %llu exit!!!", thread_rep_->thread_id());
+  LOG(INFO) << "BinlogReceiver thread " << thread_rep_->thread_id() << " exit!!!";
   delete thread_rep_;
 }
 
@@ -38,10 +38,10 @@ bool BinlogReceiverThread::Handles::AccessHandle(std::string& ip) const {
   if (ip == "127.0.0.1") {
     ip = g_conf.local_ip;
   }
-  pinfo("Master Binlog Sender: %s connecting", ip.c_str());
+  LOG(INFO) << "Master Binlog Sender: " << ip << " connecting";
   // if (binlog_receiver_->thread_rep_->conn_num() != 0 ||
   //     !g_pika_port->ShouldAccessConnAsMaster(ip)) {
-  //   pinfo("BinlogReceiverThread AccessHandle failed";
+  //   LOG(INFO) << "BinlogReceiverThread AccessHandle failed";
   //   return false;
   // }
   g_pika_port->PlusMasterConnection();

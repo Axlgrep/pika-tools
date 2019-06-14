@@ -1,8 +1,7 @@
+#include <glog/logging.h>
+
 #include "const.h"
 #include "pika_sender.h"
-
-
-
 #include "slash/include/xdebug.h"
 
 PikaSender::PikaSender(std::string ip, int64_t port, std::string password):
@@ -39,11 +38,11 @@ void PikaSender::ConnectRedis() {
     slash::Status s = cli_->Connect(ip_, port_);
     if (!s.ok()) {
       cli_ = NULL;
-      log_info("Can not connect to %s:%d: %s", ip_.data(), port_, s.ToString().data());
+      LOG(INFO) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
       continue;
     } else {
       // Connect success
-      log_info("Connect to %s:%d:%s", ip_.data(), port_, s.ToString().data());
+      LOG(INFO) << "Connect to " << ip_ << ":" << port_ << " success";
 
       // Authentication
       if (!password_.empty()) {
@@ -58,17 +57,17 @@ void PikaSender::ConnectRedis() {
         if (s.ok()) {
           s = cli_->Recv(&resp);
           if (resp[0] == "OK") {
-            log_info("Authentic success");
+            LOG(INFO) << "Authentic success";
           } else {
             cli_->Close();
-            log_warn("Invalid password");
+            LOG(WARNING) << "Invalid password";
             cli_ = NULL;
             should_exit_ = true;
             return;
           }
         } else {
           cli_->Close();
-          log_info("%s", s.ToString().data());
+          LOG(INFO) << "auth faild: " << s.ToString();
           cli_ = NULL;
           continue;
         }
@@ -86,14 +85,14 @@ void PikaSender::ConnectRedis() {
           if (s.ok()) {
             if (resp[0] == "NOAUTH Authentication required.") {
               cli_->Close();
-              log_warn("Authentication required");
+              LOG(WARNING) << "Authentication required";
               cli_ = NULL;
               should_exit_ = true;
               return;
             }
           } else {
             cli_->Close();
-            log_info("%s", s.ToString().data());
+            LOG(INFO) << s.ToString();
             cli_ = NULL;
           }
         }
@@ -125,14 +124,14 @@ void PikaSender::SendCommand(std::string &command, const std::string &key) {
     elements_--;
     LoadKey(key);
     cli_->Close();
-    log_info("%s", s.ToString().data());
+    LOG(INFO) << s.ToString();
     cli_ = NULL;
     ConnectRedis();
   }
 }
 
 void *PikaSender::ThreadMain() {
-  log_info("Start sender thread...");
+  LOG(INFO) << "Start sender thread...";
   int cnt = 0;
 
   if (cli_ == NULL) {
@@ -172,7 +171,7 @@ void *PikaSender::ThreadMain() {
 
   delete cli_;
   cli_ = NULL;
-  log_info("PikaSender thread complete");
+  LOG(INFO) << "PikaSender thread complete";
   return NULL;
 }
 
