@@ -15,7 +15,7 @@
 
 class PikaSender : public pink::Thread {
 public:
-  PikaSender(std::string ip, int64_t port, std::string password);
+  PikaSender(int id, std::string ip, int64_t port, std::string password);
   virtual ~PikaSender();
   void LoadKey(const std::string &cmd);
   void Stop();
@@ -27,6 +27,7 @@ public:
   void ConnectRedis();
 
 private:
+  int id_;
   pink::PinkCli *cli_;
   slash::CondVar signal_;
   slash::Mutex keys_mutex_;

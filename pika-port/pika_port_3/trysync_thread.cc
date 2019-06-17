@@ -262,7 +262,7 @@ int TrysyncThread::Retransmit() {
 
   // Init SenderThread
   for (size_t i = 0; i < thread_num; i++) {
-    senders_.emplace_back(new PikaSender(ip, port, password));
+    senders_.emplace_back(new PikaSender(i, ip, port, password));
   }
 
   // Init db
