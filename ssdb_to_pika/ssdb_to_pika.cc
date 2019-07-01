@@ -58,7 +58,7 @@ void BlackwidowMigrateKv(const std::string& ip, const int port,
       }
       else {
         int32_t time_to_live = atoi(ttl.c_str());
-        status_blackwidow = db->Set(*iter, *(iter + 1), time_to_live);
+        status_blackwidow = db->Setex(*iter, *(iter + 1), time_to_live);
       }
       //std::cout << "set " << *iter << " " << *(iter + 1) << std::endl;
       if (!status_blackwidow.ok()) {
