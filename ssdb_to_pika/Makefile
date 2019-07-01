@@ -4,16 +4,35 @@ OBJECT = ssdb_to_pika
 SRC_DIR = .
 OUTPUT = .
 
-INCLUDE_PATH = -I./ \
-							 -I../third/nemo/include \
-							 -I../third/nemo-rocksdb/include \
-							 -I../third/rocksdb \
-							 -I../third/rocksdb/include
+SSDB_CLIENT=./libssdb-client.a
 
-STATIC_LIBS = ./libssdb-client.a \
-					    ../third/nemo/lib/libnemo.a \
-					    ../third/nemo-rocksdb/lib/libnemodb.a \
-					    ../third/rocksdb/librocksdb.a
+THIRD=./../third
+
+ROCKSDB_PATH=$(THIRD)/rocksdb
+ROCKSDB=$(THIRD)/rocksdb/librocksdb.a
+ 
+NEMO_PATH=$(THIRD)/nemo
+NEMO=$(THIRD)/nemo/lib/libnemo.a
+
+NEMO_ROCKSDB_PATH=$(THIRD)/nemo-rocksdb
+NEMO_ROCKSDB=$(THIRD)/nemo-rocksdb/lib/libnemodb.a
+
+BLACKWIDOW_PATH=$(THIRD)/blackwidow
+BLACKWIDOW=$(THIRD)/blackwidow/lib/libblackwidow.a
+
+SLASH_PATH=$(THIRD)/slash
+SLASH=$(THIRD)/slash/slash/lib/libslash.a
+
+INCLUDE_PATH = -I./ \
+							 -I$(THIRD)/nemo/include \
+							 -I$(THIRD)/nemo-rocksdb/include \
+							 -I$(THIRD)/rocksdb \
+							 -I$(THIRD)/rocksdb/include \
+							 -I$(THIRD)/blackwidow/include/blackwidow \
+							 -I$(THIRD)/blackwidow \
+							 -I$(THIRD)/slash
+
+
 
 LIBS = -lrt -pthread -lsnappy -lbz2 -lz
 LIBS += $(ROCKSDB_LDFLAGS)
@@ -31,11 +50,26 @@ all: $(OBJECT)
 	@echo "Success, go, go, go..."
 
 
-$(OBJECT): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(INCLUDE_PATH) $(STATIC_LIBS) $(LIBS)
+$(OBJECT): $(OBJS) $(NEMO) $(NEMO_ROCKSDB) $(ROCKSDB) $(BLACKWIDOW) $(SLASH) $(SSDB_CLIENT)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(INCLUDE_PATH) $(NEMO) $(NEMO_ROCKSDB) $(ROCKSDB) $(BLACKWIDOW) $(SLASH)  $(LIBS) $(SSDB_CLIENT)
 
 $(OBJS): %.o : %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(INCLUDE_PATH)
+
+$(NEMO):
+	make -C $(NEMO_PATH) ROCKSDB_PATH=./../rocksdb NEMODB_PATH=./../nemo-rocksdb
+
+$(NEMO_ROCKSDB):
+	make -C $(NEMO_ROCKSDB_PATH) ROCKSDB_PATH=./../rocksdb
+
+$(BLACKWIDOW):
+	make -C $(BLACKWIDOW_PATH) ROCKSDB_PATH=./../rocksdb SLASH_PATH=./../slash
+
+$(SLASH):
+	make -C $(SLASH_PATH)/slash
+
+$(ROCKSDB):
+	make -C $(ROCKSDB_PATH) -j 24 static_lib
 
 clean:
 	rm -rf $(SRC_DIR)/*.o
