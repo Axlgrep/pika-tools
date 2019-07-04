@@ -25,4 +25,4 @@ script:
   - cd ./pika-port/pika_port_3 && make && cd .. && cd ..
   - cd ./manifest_generator && make && cd ..
   - cd ./ssdb_to_pika && make && cd ..
-  - cd ./rdb_to_pika && .install_rdb_tools.sh && make && cd ..
+  - cd ./rdb_to_pika && ./install_rdb_tools.sh && make && cd ..
