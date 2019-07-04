@@ -8,9 +8,9 @@
 void Usage() {
   std::cout << "Usage:" << std::endl;
   std::cout << "      redisConn read protocol_file and send command to pika DB " << std::endl;
-  std::cout << "      --f     protocol_file name" << std::endl;
-  std::cout << "      --i     pika ip address" << std::endl;
-  std::cout << "      --p     pika port" << std::endl;
+  std::cout << "      --f       protocol_file name" << std::endl;
+  std::cout << "      --i       pika ip address" << std::endl;
+  std::cout << "      --p       pika port" << std::endl;
   std::cout << "      [--a]     password for pika db; default = NULL" << std::endl;
   std::cout << "example " << "./redisConn protocol_file 127.0.0.1 9221  password" << std::endl;  
 }
@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
     }
     else {
       std::cout << "conneciont error : can't allocate redis context." << std::endl;
+      redisFree(c);
+      return -1;
     }
   }
   std::cout << "connection successful" << std::endl;
@@ -47,6 +49,7 @@ int main(int argc, char** argv) {
     if (r->type == REDIS_REPLY_ERROR) {
       std::cout << "authentication failed " << std::endl; 
       freeReplyObject(r);
+      redisFree(c);
       return -1; 
     }
     else {
@@ -54,7 +57,7 @@ int main(int argc, char** argv) {
       freeReplyObject(r);
     } 
   }
-  char line[1024];
+  char line[1000000];
   while (fin.getline(line, sizeof(line))) {
     int k = atoi(line + 1);
     std::string command;
@@ -74,5 +77,6 @@ int main(int argc, char** argv) {
     }
   }
   std::cout << "transport finished" << std::endl; 
+  redisFree(c);
   return 0;
 }
