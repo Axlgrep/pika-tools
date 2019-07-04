@@ -1,0 +1,2 @@
+First: we need to run this bash to transform .rdb to protocolfile
+Second:we do make to generate binary code to transport protocolfile to pika db
