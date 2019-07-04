@@ -1,7 +1,7 @@
 #!/bin/bash
 #author justforfun
 rdb_filename=dump.rdb
-if [ $# !0 ]
+if [ $# -gt 0 ]
 then
 rdb_filename=$1
 fi
