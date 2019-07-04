@@ -1,3 +1,0 @@
-First: we need to run install_rdb_tools.sh to install redis-rdb-tools
-Second:we need to run trans_rdb_to_pro.sh to transfer rdb file to protocol file, the first argument is rbdfile name, default is dump.rdb
-Third:we do make to generate binary code to transport protocolfile to pika db
