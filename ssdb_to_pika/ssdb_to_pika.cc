@@ -1008,13 +1008,13 @@ void NemoDoQueue(const std::string& ip, const int port,
 
 void Usage() {
   std::cout << "usage:" << std::endl;
-  std::cout << "	ssdb_to_pika read data from ssdb DB and send it wo nemo or blacbwidow DB" << std::endl;
+  std::cout << "	ssdb_to_pika read data from ssdb DB and send it to nemo or blacbwidow DB" << std::endl;
   std::cout << "	ssdb_to_pika  host  port  path  form   [password]" <<std::endl;
   std::cout << "	--host   		ssdb_server_ip_addr" << std::endl;
   std::cout << "	--port   		ssdb_server_port" << std::endl;
-  std::cout << "	--path 		pika db's path" <<std::endl;
+  std::cout << "	--path 		        pika db's path" <<std::endl;
   std::cout << "	--form   		nemo or blackwidow based on your pika version "<< std::endl;
-  std::cout << "	--[password]  	ssdb_server_password if it has password "<< std::endl;
+  std::cout << "	--[password]  	        ssdb_server_password if it has password "<< std::endl;
   std::cout << "example: ./ssdb_to_pika localhost 8888 ./../db blackwidow" << std::endl;
 }
 
