@@ -215,7 +215,7 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
       }
       std::vector<blackwidow::ScoreMember> stm(sms.size() / 2);
       zset_num += stm.size();
-      for (size_t index = 0; index < stm.size(); index++) {
+      for (int index = 0; index < stm.size(); index++) {
         stm[index].member = sms[index * 2];
         stm[index].score = std::stod(sms[index * 2 + 1]);
       }
@@ -290,10 +290,10 @@ void BlackwidowDoKv(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++){
     total_num += num_of_kv[i];
   }
-  std::cout << "===========Kv migrate done=============" << std::endl;
+  std::cout << "==============Kv migrate done=================" << std::endl;
   std::cout << "Moving kv threads num: " << thread_num << std::endl;
   std::cout << "Total kv nums: " << total_num << std::endl;
-  std::cout << "=======================================" << std::endl;
+  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoHash(const std::string& ip, const int port,
@@ -358,10 +358,10 @@ void BlackwidowDoHash(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++) {
     total_num += num_of_hash[i]; 
   }
-  std::cout << "=============Hash migrate done=================" << std::endl;
+  std::cout << "=============Hash migrate done================" << std::endl;
   std::cout << "Moving hash threads nums: " << thread_num << std::endl;
   std:: cout << "Toal hash pair nums: " << total_num << std::endl;
-  std::cout << "===============================================" << std::endl;
+  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoZset(const std::string& ip, const int port,
@@ -427,10 +427,10 @@ void BlackwidowDoZset(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++) {
     total_num += num_of_zset[i];
   }
-  std::cout << "========Zset migrate done============" << std::endl;
+  std::cout << "==============Zset migrate done===============" << std::endl;
   std::cout << "Moving zset thread nums: " << thread_num << std::endl;
   std::cout << "Total zset member nums: " << total_num << std::endl;
-  std::cout << "=====================================" << std::endl;
+  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoQueue(const std::string& ip, const int port,
@@ -496,10 +496,10 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++) {
     total_num += num_of_list[i];
   }
-  std::cout << "===============Queue migrate done=================" << std::endl;
+  std::cout << "=============Queue migrate done===============" << std::endl;
   std::cout << "Moving list threads num: " << thread_num << std::endl;
   std::cout << "List members num: " << total_num << std::endl;
-  std::cout << "==================================================" << std::endl;
+  std::cout << "==============================================" << std::endl;
 }
 
 
@@ -796,10 +796,10 @@ void NemoDoKv(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++) {
     total_num += num_of_kv[i];
   }
-  std::cout << "==========Kv migrate done============" << std::endl;
+  std::cout << "==============Kv migrate done=================" << std::endl;
   std::cout << "moving kv threads num :" << thread_num << std::endl;
   std::cout << "total kv num:" << total_num << std::endl;
-  std::cout << "====================================" << std::endl; 
+  std::cout << "==============================================" << std::endl; 
 }
 
 void NemoDoHash(const std::string& ip, const int port,
@@ -932,10 +932,11 @@ void NemoDoZset(const std::string& ip, const int port,
   for(int i = 0; i < thread_num; i++) {
     total_num += num_of_zset[i];  
   }  
-  std::cout << "==============Zset migrate done==============" << std::endl;
+
+  std::cout << "===============Zset migrate done==============" << std::endl;
   std::cout << "Moving zset thread_num: " << thread_num << std::endl;
   std::cout << "total zset member: " << total_num << std::endl;
-  std::cout << "=============================================" << std::endl; 
+  std::cout << "==============================================" << std::endl; 
 }
 
 void NemoDoQueue(const std::string& ip, const int port,
@@ -1000,10 +1001,10 @@ void NemoDoQueue(const std::string& ip, const int port,
   for (int i = 0; i < thread_num; i++) {
     total_num += num_of_list[thread_num];
   }
-  std::cout << "=============Queue migrate done==============" << std::endl;
+  std::cout << "=============Queue migrate done===============" << std::endl;
   std::cout << "Moving list threads num: " << thread_num << std::endl;
   std::cout << "Total list members num: " << total_num << std::endl; 
-  std::cout << "=============================================" << std::endl; 
+  std::cout << "==============================================" << std::endl; 
 }
 
 void Usage() {
@@ -1016,7 +1017,19 @@ void Usage() {
   std::cout << "\t--[password]      ssdb_server_password if it has password" << std::endl;
   std::cout << "\texample: ./ssdb_to_pika 127.0.0.1 8888 ./db blackwidow" << std::endl;
 }
-
+void printInfo(int sign, const std::time_t& now, std::string& ip, int port, std::string& path) {
+  if (sign == 0){  
+    std::cout << "=============ssdb to nemo=====================" << std::endl;
+  }
+  else {
+    std::cout << "=============ssdb to balckwidow===============" << std::endl;    
+  }
+  std::cout <<   "ssdb_server ip:      " << ip << std::endl;
+  std::cout <<   "ssdb_server port:    " << port << std::endl;
+  std::cout <<   "db path:             " << path << std::endl;
+  std::cout <<   "Start Up time:       " << ctime(&now) << std::endl;		
+  std::cout <<   "==============================================" << std::endl;
+}
 int main(int argc, char** argv) {
   if (argc != 5 && argc != 6) {
     Usage();
@@ -1030,7 +1043,8 @@ int main(int argc, char** argv) {
   if (argc == 6) {
     password = argv[5];
   }
-  auto start = std::chrono::system_clock::now();
+  std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
+  std::time_t now = std::chrono::system_clock::to_time_t(start_time);
   if (mode == "nemo") {
     nemo::Options option;
     option.write_buffer_size = 268435456; //256M
@@ -1038,13 +1052,7 @@ int main(int argc, char** argv) {
     option.max_background_flushes = 4;
     option.max_background_compactions = 4;
     nemo::Nemo* db = new nemo::Nemo(path, option);
-    std::cout << "===========ssdb to nemo=============" << std::endl;
-    std::cout << "ssdb_server ip:" << ip << std::endl;
-    std::cout << "ssdb_server port:" << port << std::endl;
-    std::cout << "db path:" << path << std::endl;
-    std::time_t time_start = std::chrono::system_clock::to_time_t(start);
-    std::cout << "====================================" << std::endl;
-    std::cout << "Start Up time: " << ctime(&time_start) << std::endl;		
+    printInfo(0, now, ip, port, path);
     std::thread thread_kv = std::thread(NemoDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
     std::thread thread_hash = std::thread(NemoDoHash, ip, port, password, db); 
@@ -1052,7 +1060,6 @@ int main(int argc, char** argv) {
     std::thread thread_zset = std::thread(NemoDoZset, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::thread thread_queue = std::thread(NemoDoQueue, ip, port, password, db);
-
     thread_kv.join();
     thread_hash.join();
     thread_zset.join();
@@ -1064,13 +1071,7 @@ int main(int argc, char** argv) {
     blackwidow::BlackWidow* db = new blackwidow::BlackWidow();
     option.options.create_if_missing = true;
     db->Open(option, path);
-    std::cout << "============ssdb to blackwidow=============" << std::endl;
-    std::cout << "ssdb_server ip: " << ip << std::endl;
-    std::cout << "ssdb_sever port: " << port << std::endl;
-    std::cout << "db path " << path << std::endl;
-    std::time_t time_start = std::chrono::system_clock::to_time_t(start);
-    std::cout << "Start Up time : " << ctime(&time_start) << std::endl;
-    std::cout << "===========================================" << std::endl;
+    printInfo(1, now, ip, port, path);
     std::thread thread_kv = std::thread(BlackwidowDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::thread thread_hash = std::thread(BlackwidowDoHash, ip, port, password, db);
@@ -1078,7 +1079,6 @@ int main(int argc, char** argv) {
     std::thread thread_zset = std::thread(BlackwidowDoZset, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::thread thread_queue = std::thread(BlackwidowDoQueue, ip, port, password, db);
-
     thread_kv.join();
     thread_hash.join();
     thread_zset.join();
@@ -1090,9 +1090,17 @@ int main(int argc, char** argv) {
     Usage();
     return -1;
   }
-  auto end = std::chrono::system_clock::now();
-  std::time_t time_end = std::chrono::system_clock::to_time_t(end);
-  std::cout << "===============End time :============" << ctime(&time_end) << std::endl;
-  std::cout << "Migrate used " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "s" << std::endl;
+  std::chrono::system_clock::time_point end_time = std::chrono::system_clock::now();
+  now = std::chrono::system_clock::to_time_t(end_time);
+  std::cout <<   "====================END=======================" << std::endl;
+  std::cout << "Finish Time : " << asctime(localtime(&now));  
+  auto hours = std::chrono::duration_cast<std::chrono::hours>(end_time - start_time).count();
+  auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end_time - start_time).count();
+  auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+  std::cout << "Total Time Cost : "
+            << hours << " hours "
+            << minutes % 60 << " minutes "
+            << seconds % 60 << " seconds "
+            << std::endl;
   return 0;
 }
