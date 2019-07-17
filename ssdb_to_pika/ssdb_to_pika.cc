@@ -215,7 +215,7 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
       }
       std::vector<blackwidow::ScoreMember> stm(sms.size() / 2);
       zset_num += stm.size();
-      for (int index = 0; index < stm.size(); index++) {
+      for (size_t index = 0; index < stm.size(); index++) {
         stm[index].member = sms[index * 2];
         stm[index].score = std::stod(sms[index * 2 + 1]);
       }
@@ -1007,15 +1007,14 @@ void NemoDoQueue(const std::string& ip, const int port,
 }
 
 void Usage() {
-  std::cout << "usage:" << std::endl;
-  std::cout << "	ssdb_to_pika read data from ssdb DB and send it to nemo or blacbwidow DB" << std::endl;
-  std::cout << "	ssdb_to_pika  host  port  path  form   [password]" <<std::endl;
-  std::cout << "	--host   		ssdb_server_ip_addr" << std::endl;
-  std::cout << "	--port   		ssdb_server_port" << std::endl;
-  std::cout << "	--path 		        pika db's path" <<std::endl;
-  std::cout << "	--form   		nemo or blackwidow based on your pika version "<< std::endl;
-  std::cout << "	--[password]  	        ssdb_server_password if it has password "<< std::endl;
-  std::cout << "example: ./ssdb_to_pika localhost 8888 ./../db blackwidow" << std::endl;
+  std::cout << "Usage: " << std::endl;
+  std::cout << "\tSsdb_to_pika read data from SSDB and send to Nemo or Blackwidow" << std::endl;
+  std::cout << "\t--host            ssdb_server_ip" << std::endl;
+  std::cout << "\t--port            ssdb_server_port" << std::endl;
+  std::cout << "\t--path            pika db's path"<< std::endl;
+  std::cout << "\t--form            nemo or blackwidow based on your pika version" << std::endl;
+  std::cout << "\t--[password]      ssdb_server_password if it has password" << std::endl;
+  std::cout << "\texample: ./ssdb_to_pika 127.0.0.1 8888 ./db blackwidow" << std::endl;
 }
 
 int main(int argc, char** argv) {
