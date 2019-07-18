@@ -1047,7 +1047,6 @@ int main(int argc, char** argv) {
   if (argc == 6) {
     password = argv[5];
   }
-  DBType type;
   std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
   std::time_t now = std::chrono::system_clock::to_time_t(start_time);
   if (mode == "nemo") {
@@ -1057,8 +1056,7 @@ int main(int argc, char** argv) {
     option.max_background_flushes = 4;
     option.max_background_compactions = 4;
     nemo::Nemo* db = new nemo::Nemo(path, option);
-    type = NEMO;
-    printInfo(type, now, ip, port, path);
+    printInfo(NEMO, now, ip, port, path);
     std::thread thread_kv = std::thread(NemoDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
     std::thread thread_hash = std::thread(NemoDoHash, ip, port, password, db); 
@@ -1077,8 +1075,7 @@ int main(int argc, char** argv) {
     blackwidow::BlackWidow* db = new blackwidow::BlackWidow();
     option.options.create_if_missing = true;
     db->Open(option, path);
-    type = BLACKWIDOW;
-    printInfo(type, now, ip, port, path);
+    printInfo(BLACKWIDOW, now, ip, port, path); 
     std::thread thread_kv = std::thread(BlackwidowDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::thread thread_hash = std::thread(BlackwidowDoHash, ip, port, password, db);
