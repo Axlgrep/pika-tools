@@ -5,6 +5,11 @@
 #include "SSDB_client.h"
 #include "blackwidow.h"
 #include "nemo.h"
+
+enum DBType{
+  NEMO,
+  BLACKWIDOW
+};
 const int kBatchLen = 1000;
 const int kSplitNum = 500000;
 //----------------------------
@@ -215,7 +220,7 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
       }
       std::vector<blackwidow::ScoreMember> stm(sms.size() / 2);
       zset_num += stm.size();
-      for (int index = 0; index < stm.size(); index++) {
+      for (size_t index = 0; index < stm.size(); index++) {
         stm[index].member = sms[index * 2];
         stm[index].score = std::stod(sms[index * 2 + 1]);
       }
@@ -1017,10 +1022,9 @@ void Usage() {
   std::cout << "\t--[password]      ssdb_server_password if it has password" << std::endl;
   std::cout << "\texample: ./ssdb_to_pika 127.0.0.1 8888 ./db blackwidow" << std::endl;
 }
-void printInfo(int sign, const std::time_t& now, std::string& ip, int port, std::string& path) {
-  if (sign == 0){  
-    std::cout << "=============ssdb to nemo=====================" << std::endl;
-  }
+void printInfo(DBType type, const std::time_t& now, std::string& ip, int port, std::string& path) {
+  if (type == NEMO){  
+    std::cout << "=============ssdb to nemo=====================" << std::endl; } 
   else {
     std::cout << "=============ssdb to balckwidow===============" << std::endl;    
   }
@@ -1043,6 +1047,7 @@ int main(int argc, char** argv) {
   if (argc == 6) {
     password = argv[5];
   }
+  DBType type;
   std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
   std::time_t now = std::chrono::system_clock::to_time_t(start_time);
   if (mode == "nemo") {
@@ -1052,7 +1057,8 @@ int main(int argc, char** argv) {
     option.max_background_flushes = 4;
     option.max_background_compactions = 4;
     nemo::Nemo* db = new nemo::Nemo(path, option);
-    printInfo(0, now, ip, port, path);
+    type = NEMO;
+    printInfo(type, now, ip, port, path);
     std::thread thread_kv = std::thread(NemoDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
     std::thread thread_hash = std::thread(NemoDoHash, ip, port, password, db); 
@@ -1071,7 +1077,8 @@ int main(int argc, char** argv) {
     blackwidow::BlackWidow* db = new blackwidow::BlackWidow();
     option.options.create_if_missing = true;
     db->Open(option, path);
-    printInfo(1, now, ip, port, path);
+    type = BLACKWIDOW;
+    printInfo(type, now, ip, port, path);
     std::thread thread_kv = std::thread(BlackwidowDoKv, ip, port, password, db);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::thread thread_hash = std::thread(BlackwidowDoHash, ip, port, password, db);
