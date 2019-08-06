@@ -1,22 +1,27 @@
 #include <iostream>
 #include <thread>
 #include <ctime>
+#include <atomic>
 
 #include "SSDB_client.h"
 #include "blackwidow.h"
 #include "nemo.h"
+#include "ThreadPool.h"
 
 enum DBType{
   NEMO,
   BLACKWIDOW
 };
+
+const std::string EXPIRE = "\xff\xff\xff\xff\xff|EXPIRE_LIST|KV";
 const int kBatchLen = 1000;
 const int kSplitNum = 500000;
+
 //----------------------------
 //blackwidow
 //----------------------------
 void BlackwidowMigrateKv(const std::string& ip, const int port,
-    const std::string& password, blackwidow::BlackWidow* db, int& kv_num,
+    const std::string& password, blackwidow::BlackWidow* db, std::atomic<int>& numKv,
     const std::string& start = "", const std::string& end = "") {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -48,7 +53,7 @@ void BlackwidowMigrateKv(const std::string& ip, const int port,
     if (kvs.size() == 0) {
       break;
     }
-    kv_num += kvs.size() >> 1;
+    numKv += kvs.size() >> 1;
     for (auto iter = kvs.begin(); iter != kvs.end(); iter += 2) {
       const std::vector<std::string>* tmp_resp;
       tmp_resp = client->request("ttl", *iter);
@@ -73,13 +78,11 @@ void BlackwidowMigrateKv(const std::string& ip, const int port,
     prev_start = kvs[kvs.size() - 2];
   }
     delete client;
-    //std::cout << std::this_thread::get_id() << ", Kv client done" << std::endl;
-
 }
 
 void BlackwidowMigrateHash(const std::string& ip, const int port,
     const std::string& password, blackwidow::BlackWidow* db,
-    std::vector<std::string> keys, int& hash_num) {
+    std::vector<std::string> keys, std::atomic<int>& numHash) {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Hash client failed to connect to ssdb" << std::endl;
@@ -94,7 +97,6 @@ void BlackwidowMigrateHash(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Hash client start to migrate, " << keys.size() << " keys, from " << keys.front() << " to " << keys.back() << std::endl;
 
   std::vector<std::string> fvs;
   ssdb::Status status_ssdb;
@@ -110,7 +112,7 @@ void BlackwidowMigrateHash(const std::string& ip, const int port,
         delete client;
         return;
       }
-      hash_num += fvs.size() >> 1;
+      numHash += fvs.size() >> 1;
       if (fvs.empty()) {
         break;
       }
@@ -127,12 +129,11 @@ void BlackwidowMigrateHash(const std::string& ip, const int port,
     }
   }
   delete client;
-  //std::cout << std::this_thread::get_id() << ", Hash client done" << std::endl;
 }
 
 void BlackwidowMigrateQueue(const std::string& ip, const int port,
     const std::string& password, blackwidow::BlackWidow* db,
-    std::vector<std::string> keys, int& list_num) {
+    std::vector<std::string> keys, std::atomic<int>& numQueue) {
     ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Queue client failed to connect to ssdb" << std::endl;
@@ -147,7 +148,6 @@ void BlackwidowMigrateQueue(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Queue client start to migrate, " << keys.size() << " keys, from " << keys.front() << " to " << keys.back() << std::endl;
 
   std::vector<std::string> fs;
   ssdb::Status status_ssdb;
@@ -173,7 +173,7 @@ void BlackwidowMigrateQueue(const std::string& ip, const int port,
         delete client;
         return;
       }
-      list_num += fs.size();
+      numQueue += fs.size();
       start += fs.size();
     }
   }
@@ -183,7 +183,7 @@ void BlackwidowMigrateQueue(const std::string& ip, const int port,
 
 void BlackwidowMigrateZset(const std::string& ip, const int port,
     const std::string& password, blackwidow::BlackWidow* db,
-    std::vector<std::string> keys, int& zset_num) {
+    std::vector<std::string> keys, std::atomic<int>& numZset) {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Zset client failed to connect to ssdb" << std::endl;
@@ -206,6 +206,7 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
   std::string prev_start_member = "";
   int32_t zadd_res;
   for (auto iter = keys.begin(); iter != keys.end(); iter++) {
+    if (EXPIRE == *iter) continue; 
     prev_start_member = "";
     while (true) {
       sms.clear();
@@ -219,7 +220,7 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
         break;
       }
       std::vector<blackwidow::ScoreMember> stm(sms.size() / 2);
-      zset_num += stm.size();
+      numZset += stm.size();
       for (size_t index = 0; index < stm.size(); index++) {
         stm[index].member = sms[index * 2];
         stm[index].score = std::stod(sms[index * 2 + 1]);
@@ -234,11 +235,11 @@ void BlackwidowMigrateZset(const std::string& ip, const int port,
     }
   }
   delete client;
-  //std::cout << std::this_thread::get_id() << ", Zset client done" << std::endl;
 }
 
 void BlackwidowDoKv(const std::string& ip, const int port,
-    const std::string& password, blackwidow::BlackWidow* db) {
+    const std::string& password, blackwidow::BlackWidow* db,
+    ThreadPool& dispatcher, std::atomic<int>& numKv) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -259,12 +260,6 @@ void BlackwidowDoKv(const std::string& ip, const int port,
 
   ssdb::Status status_ssdb;
   std::vector<std::string> keys;
-  std::thread *threads[1000];
-  int num_of_kv[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_kv[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   while (true) {
     keys.clear();
@@ -280,29 +275,16 @@ void BlackwidowDoKv(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(BlackwidowMigrateKv, ip, port,
-                            password, db, std::ref(num_of_kv[thread_num]), prev_start, keys.back());
-    thread_num++;
+    std::function<void()> task = std::bind(BlackwidowMigrateKv, ip, port,
+                        password, db, std::ref(numKv), prev_start, keys.back());
+    dispatcher.AddTask(task);
     start = prev_start = keys.back();
   }
-
-  for (int i = 0; i < thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++){
-    total_num += num_of_kv[i];
-  }
-  std::cout << "==============Kv migrate done=================" << std::endl;
-  std::cout << "Moving kv threads num: " << thread_num << std::endl;
-  std::cout << "Total kv nums: " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoHash(const std::string& ip, const int port,
-    const std::string& password, blackwidow::BlackWidow* db) {
+    const std::string& password, blackwidow::BlackWidow* db, 
+    ThreadPool& dispatcher, std::atomic<int>& numHash) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -322,12 +304,6 @@ void BlackwidowDoHash(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int thread_num = 0;
-  int num_of_hash[1000];
-  for (int i = 0; i < thread_num; i++) {
-    num_of_hash[i] = 0;
-  } 
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -348,29 +324,16 @@ void BlackwidowDoHash(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(BlackwidowMigrateHash, ip, port, 
-                          password, db, keys, std::ref(num_of_hash[thread_num]));
-    thread_num++;
+    std::function<void()> task = std::bind(BlackwidowMigrateHash, ip, port,
+                            password, db, keys, std::ref(numHash));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
-
-  for (int i = 0; i< thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_hash[i]; 
-  }
-  std::cout << "=============Hash migrate done================" << std::endl;
-  std::cout << "Moving hash threads nums: " << thread_num << std::endl;
-  std:: cout << "Toal hash pair nums: " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoZset(const std::string& ip, const int port,
-    const std::string& password, blackwidow::BlackWidow* db) {
+    const std::string& password, blackwidow::BlackWidow* db,
+    ThreadPool& dispatcher, std::atomic<int>& numZset) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -391,12 +354,6 @@ void BlackwidowDoZset(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int num_of_zset[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_zset[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -417,29 +374,16 @@ void BlackwidowDoZset(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(BlackwidowMigrateZset, ip, port, 
-                             password, db, keys, std::ref(num_of_zset[thread_num]));
-    thread_num++;
+    std::function<void()> task = std::bind(BlackwidowMigrateZset, ip, port,
+                          password, db, keys, std::ref(numZset));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
-
-  for (int i = 0; i< thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_zset[i];
-  }
-  std::cout << "==============Zset migrate done===============" << std::endl;
-  std::cout << "Moving zset thread nums: " << thread_num << std::endl;
-  std::cout << "Total zset member nums: " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl;
 }
 
 void BlackwidowDoQueue(const std::string& ip, const int port,
-    const std::string& password, blackwidow::BlackWidow* db) {
+    const std::string& password, blackwidow::BlackWidow* db,
+    ThreadPool& dispatcher, std::atomic<int>& numQueue) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -460,12 +404,6 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int num_of_list[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_list[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -485,26 +423,12 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(BlackwidowMigrateQueue, ip, port,
-                         password, db, keys, std::ref(num_of_list[thread_num]));
-    thread_num++;
+    std::function<void()> task = std::bind(BlackwidowMigrateQueue, ip, port,
+                            password, db, keys, std::ref(numQueue));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
 
-  for (int i = 0; i< thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_list[i];
-  }
-  std::cout << "=============Queue migrate done===============" << std::endl;
-  std::cout << "Moving list threads num: " << thread_num << std::endl;
-  std::cout << "List members num: " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl;
 }
 
 
@@ -514,7 +438,7 @@ void BlackwidowDoQueue(const std::string& ip, const int port,
 
 
 void NemoMigrateKv(const std::string& ip, const int port,
-    const std::string& password, nemo::Nemo* db, int& kv_num,
+    const std::string& password, nemo::Nemo* db, std::atomic<int>& numKv,
     const std::string& start = "", const std::string& end = "") {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -530,7 +454,6 @@ void NemoMigrateKv(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Kv client start to migrate, from " << start << " to " << end << std::endl;
 
   std::vector<std::string> kvs;
   ssdb::Status status_ssdb;
@@ -545,7 +468,7 @@ void NemoMigrateKv(const std::string& ip, const int port,
       std::cout << "kv client scan error" << std::endl;
       break;
     }
-    kv_num += kvs.size() >> 1;
+    numKv += kvs.size() >> 1;
     if (kvs.size() == 0) {
       break;
     }
@@ -561,7 +484,7 @@ void NemoMigrateKv(const std::string& ip, const int port,
       std::string ttl = *(tmp_resp->begin() + 1);
       if ("-1" == ttl) {
       	//std::cout << "set " << *iter << " " << *(iter+1) << std::endl;
-      	status_nemo = db->Set(*iter, *(iter+1));
+      	status_nemo = db->Set(*iter, *(iter +1));
       }
       else {
         int32_t time_to_live = atoi(ttl.c_str());
@@ -581,7 +504,7 @@ void NemoMigrateKv(const std::string& ip, const int port,
 
 void NemoMigrateHash(const std::string& ip, const int port,
     const std::string& password, nemo::Nemo* db,
-    std::vector<std::string> keys, int& hash_num) {
+    std::vector<std::string> keys, std::atomic<int>& numHash) {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Hash client failed to connect to ssdb" << std::endl;
@@ -596,8 +519,6 @@ void NemoMigrateHash(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Hash client start to migrate, " << keys.size() << " keys, from " << keys.front() << " to " << keys.back() << std::endl;
-
   std::vector<std::string> fvs;
   ssdb::Status status_ssdb;
   nemo::Status status_nemo;
@@ -616,7 +537,7 @@ void NemoMigrateHash(const std::string& ip, const int port,
       if (fvs.empty()) {
         break;
       }
-      hash_num += fvs.size() >> 1; 		
+      numHash += fvs.size() >> 1; 		
       for (auto it = fvs.begin(); it != fvs.end(); it += 2) {
 	//std::cout << "hset " << *iter << " " << *it << " " << *(it + 1) << std::endl;
         status_nemo = db->HSet(*iter, *it, *(it + 1));
@@ -630,12 +551,11 @@ void NemoMigrateHash(const std::string& ip, const int port,
     }
   }
   delete client;
-  //std::cout << std::this_thread::get_id() << ", Hash client done" << std::endl;
 }
 
 void NemoMigrateQueue(const std::string& ip, const int port,
     const std::string& password, nemo::Nemo* db,
-    std::vector<std::string> keys, int& list_num) {
+    std::vector<std::string> keys, std::atomic<int>& numQueue) {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Queue client failed to connect to ssdb" << std::endl;
@@ -650,7 +570,6 @@ void NemoMigrateQueue(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Queue client start to migrate, " << keys.size() << " keys, from " << keys.front() << " to " << keys.back() << std::endl;
 
   std::vector<std::string> fs;
   ssdb::Status status_ssdb;
@@ -668,12 +587,11 @@ void NemoMigrateQueue(const std::string& ip, const int port,
         delete client;
         return;
       }
-      list_num += fs.size() >> 1;
+      numQueue += fs.size() >> 1;
       if (fs.empty()) {
         break;
       }
       for (auto it = fs.begin(); it != fs.end(); it++) {
-	//std::cout << "rpush " << *iter << " " << *it << " " << std::endl;
         status_nemo = db->RPush(*iter, *it, &len);
         if (!status_nemo.ok()) {
           std::cout << "Queue client rpush error, key: " << *iter << std::endl;
@@ -685,12 +603,11 @@ void NemoMigrateQueue(const std::string& ip, const int port,
     }
   }
   delete client;
-  //std::cout << std::this_thread::get_id() << ", Queue client done" << std::endl;
 }
 
 void NemoMigrateZset(const std::string& ip, const int port,
     const std::string& password, nemo::Nemo* db,
-    std::vector<std::string> keys, int& num_zset) {
+    std::vector<std::string> keys, std::atomic<int>& numZset) {
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
     std::cout << "Zset client failed to connect to ssdb" << std::endl;
@@ -705,7 +622,6 @@ void NemoMigrateZset(const std::string& ip, const int port,
       return;
     }
   }
-  //std::cout << std::this_thread::get_id() << ", Zset client start to migrate, " << keys.size() << " keys, from " << keys.front() << " to " << keys.back() << std::endl;
 
   std::vector<std::string> sms;
   ssdb::Status status_ssdb;
@@ -714,6 +630,7 @@ void NemoMigrateZset(const std::string& ip, const int port,
   std::string prev_start_member = "";
   int64_t zadd_res;
   for (auto iter = keys.begin(); iter != keys.end(); iter++) {
+    if (EXPIRE == *iter) continue;
     prev_start_member = "";
     while (true) {
       sms.clear();
@@ -726,9 +643,8 @@ void NemoMigrateZset(const std::string& ip, const int port,
       if (sms.empty()) {
         break;
       }
-      num_zset += sms.size() >> 1;
+      numZset += sms.size() >> 1;
       for (auto it = sms.begin(); it != sms.end(); it += 2) {
-        //std::cout << "zadd " << *iter << " " << *it << " " << *(it+1) << std::endl;
         status_nemo = db->ZAdd(*iter, stod(*(it + 1)), *it, &zadd_res);
         if (!status_nemo.ok()) {
           std::cout << "Zadd client zadd error, key: " << *iter << std::endl;
@@ -740,11 +656,11 @@ void NemoMigrateZset(const std::string& ip, const int port,
     }
   }
   delete client;
-  //std::cout << std::this_thread::get_id() << ", Zset client done" << std::endl;
 }
 
 void NemoDoKv(const std::string& ip, const int port,
-    const std::string& password, nemo::Nemo* db) {
+    const std::string& password, nemo::Nemo* db, 
+    ThreadPool& dispatcher, std::atomic<int>& numKv) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -765,12 +681,6 @@ void NemoDoKv(const std::string& ip, const int port,
 
   ssdb::Status status_ssdb;
   std::vector<std::string> keys;
-  std::thread *threads[1000];
-  int num_of_kv[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_kv[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   while (true) {
     keys.clear();
@@ -786,29 +696,16 @@ void NemoDoKv(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(NemoMigrateKv, ip, port, 
-      password, db, std::ref(num_of_kv[thread_num]), prev_start, keys.back());
-    thread_num++;
+    std::function<void()> task = std::bind(NemoMigrateKv, ip,
+                          port, password, db, std::ref(numKv), prev_start, keys.back()); 
+    dispatcher.AddTask(task);  
     start = prev_start = keys.back();
   }
-
-  for (int i = 0; i < thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_kv[i];
-  }
-  std::cout << "==============Kv migrate done=================" << std::endl;
-  std::cout << "moving kv threads num :" << thread_num << std::endl;
-  std::cout << "total kv num:" << total_num << std::endl;
-  std::cout << "==============================================" << std::endl; 
 }
 
 void NemoDoHash(const std::string& ip, const int port,
-    const std::string& password, nemo::Nemo* db) {
+    const std::string& password, nemo::Nemo* db, 
+    ThreadPool& dispatcher, std::atomic<int>& numHash) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -828,12 +725,6 @@ void NemoDoHash(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int num_of_hash[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_hash[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -854,29 +745,16 @@ void NemoDoHash(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(NemoMigrateHash, ip, port,
-    password, db, keys, std::ref(num_of_hash[thread_num]));
-    thread_num ++;
+    std::function<void()> task = std::bind(NemoMigrateHash, ip, port,
+                password, db, keys, std::ref(numHash));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
-
-  for (int i = 0; i< thread_num; i++) {
-     threads[i]->join();
-     delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_hash[i];
-  }
-  std::cout << "===============Hash migrate done==============" << std::endl;
-  std::cout << "Moving hash thread num " << thread_num << std::endl;
-  std::cout << "total hash pairs " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl;
 }
 
 void NemoDoZset(const std::string& ip, const int port,
-    const std::string& password, nemo::Nemo* db) {
+    const std::string& password, nemo::Nemo* db, 
+    ThreadPool& dispatcher, std::atomic<int>& numZset) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -897,12 +775,6 @@ void NemoDoZset(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int num_of_zset[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_zset[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -922,30 +794,16 @@ void NemoDoZset(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(NemoMigrateZset, ip, port, 
-                            password, db, keys, std::ref(num_of_zset[thread_num]));
-    thread_num++;
+    std::function<void()> task = std::bind(NemoMigrateZset, ip, port,
+                password, db, keys, std::ref(numZset));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
-
-  for (int i = 0; i< thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for(int i = 0; i < thread_num; i++) {
-    total_num += num_of_zset[i];  
-  }  
-
-  std::cout << "===============Zset migrate done==============" << std::endl;
-  std::cout << "Moving zset thread_num: " << thread_num << std::endl;
-  std::cout << "total zset member: " << total_num << std::endl;
-  std::cout << "==============================================" << std::endl; 
 }
 
 void NemoDoQueue(const std::string& ip, const int port,
-    const std::string& password, nemo::Nemo* db) {
+    const std::string& password, nemo::Nemo* db,
+    ThreadPool& dispatcher, std::atomic<int>& numQueue) {
 
   ssdb::Client *client = ssdb::Client::connect(ip, port);
   if (client == NULL) {
@@ -966,12 +824,6 @@ void NemoDoQueue(const std::string& ip, const int port,
   std::string end = "";
 
   ssdb::Status status_ssdb;
-  std::thread *threads[1000];
-  int num_of_list[1000];
-  for (int i = 0; i < 1000; i++) {
-    num_of_list[i] = 0;
-  }
-  int thread_num = 0;
   std::string prev_start = "";
   std::vector<std::string> keys;
   while (true) {
@@ -991,36 +843,43 @@ void NemoDoQueue(const std::string& ip, const int port,
       delete client;
       break;
     }
-
-    threads[thread_num] = new std::thread(NemoMigrateQueue, ip, port,
-				     password, db, keys, std::ref(num_of_list[thread_num]));
-    thread_num ++;
+    std::function<void()> task = std::bind(NemoMigrateQueue, ip, port,
+                 password, db ,keys ,std::ref(numQueue));
+    dispatcher.AddTask(task);
     start = prev_start = resp->back();
   }
 
-  for (int i = 0; i< thread_num; i++) {
-    threads[i]->join();
-    delete threads[i];
-  }
-  int total_num = 0;
-  for (int i = 0; i < thread_num; i++) {
-    total_num += num_of_list[thread_num];
-  }
-  std::cout << "=============Queue migrate done===============" << std::endl;
-  std::cout << "Moving list threads num: " << thread_num << std::endl;
-  std::cout << "Total list members num: " << total_num << std::endl; 
+}
+
+void PrintRes(std::atomic<int>& numKv, std::atomic<int>& numHash, 
+                       std::atomic<int>& numZset, std::atomic<int>& numQueue) {
+  std::cout << "===============Kv migrate done================" << std::endl;
+  std::cout << "Total Kv members num: " << numKv << std::endl;
+  std::cout << "==============================================" << std::endl; 
+
+  std::cout << "=============Hash migrate done================" << std::endl;
+  std::cout << "Total Hash members num: " << numHash << std::endl;
+  std::cout << "==============================================" << std::endl; 
+
+  std::cout << "=============Zset migrate done================" << std::endl;
+  std::cout << "Total Zset members num: " << numZset << std::endl;
+  std::cout << "==============================================" << std::endl; 
+
+  std::cout << "=============List migrate done================" << std::endl;
+  std::cout << "Total list members num: " << numQueue << std::endl;
   std::cout << "==============================================" << std::endl; 
 }
 
 void Usage() {
   std::cout << "Usage: " << std::endl;
-  std::cout << "\tSsdb_to_pika read data from SSDB and send to Nemo or Blackwidow" << std::endl;
+  std::cout << "\tssdb_to_pika read data from SSDB and send to Nemo or Blackwidow" << std::endl;
   std::cout << "\t--host            ssdb_server_ip" << std::endl;
   std::cout << "\t--port            ssdb_server_port" << std::endl;
   std::cout << "\t--path            pika db's path"<< std::endl;
   std::cout << "\t--form            nemo or blackwidow based on your pika version" << std::endl;
   std::cout << "\t--[password]      ssdb_server_password if it has password" << std::endl;
-  std::cout << "\texample: ./ssdb_to_pika 127.0.0.1 8888 ./db blackwidow" << std::endl;
+  std::cout << "\t--[n]		    the number of threads write data to db, default is 15" << std::endl;
+  std::cout << "\texample: ./ssdb_to_pika 127.0.0.1 8888 ./db blackwidow  password 15" << std::endl;
 }
 void printInfo(DBType type, const std::time_t& now, std::string& ip, int port, std::string& path) {
   if (type == NEMO){  
@@ -1035,7 +894,7 @@ void printInfo(DBType type, const std::time_t& now, std::string& ip, int port, s
   std::cout <<   "==============================================" << std::endl;
 }
 int main(int argc, char** argv) {
-  if (argc != 5 && argc != 6) {
+  if (argc != 5 && argc != 6 && argc != 7) {
     Usage();
     return -1;
   }
@@ -1044,58 +903,73 @@ int main(int argc, char** argv) {
   std::string path = argv[3];
   std::string mode = argv[4];
   std::string password = "";
+  int threadnum = 10;
   if (argc == 6) {
     password = argv[5];
   }
+  if (argc == 7) {
+    threadnum = atoi(argv[6]);
+  }
   std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now();
   std::time_t now = std::chrono::system_clock::to_time_t(start_time);
-  if (mode == "nemo") {
-    nemo::Options option;
-    option.write_buffer_size = 268435456; //256M
-    option.target_file_size_base = 20971520; //20M
-    option.max_background_flushes = 4;
-    option.max_background_compactions = 4;
-    nemo::Nemo* db = new nemo::Nemo(path, option);
-    printInfo(NEMO, now, ip, port, path);
-    std::thread thread_kv = std::thread(NemoDoKv, ip, port, password, db);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
-    std::thread thread_hash = std::thread(NemoDoHash, ip, port, password, db); 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::thread thread_zset = std::thread(NemoDoZset, ip, port, password, db);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::thread thread_queue = std::thread(NemoDoQueue, ip, port, password, db);
-    thread_kv.join();
-    thread_hash.join();
-    thread_zset.join();
-    thread_queue.join();
-    delete db;
-  }
-  else if (mode == "blackwidow") {
-    blackwidow::BlackwidowOptions option;
-    blackwidow::BlackWidow* db = new blackwidow::BlackWidow();
-    option.options.create_if_missing = true;
-    db->Open(option, path);
-    printInfo(BLACKWIDOW, now, ip, port, path); 
-    std::thread thread_kv = std::thread(BlackwidowDoKv, ip, port, password, db);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::thread thread_hash = std::thread(BlackwidowDoHash, ip, port, password, db);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::thread thread_zset = std::thread(BlackwidowDoZset, ip, port, password, db);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::thread thread_queue = std::thread(BlackwidowDoQueue, ip, port, password, db);
-    thread_kv.join();
-    thread_hash.join();
-    thread_zset.join();
-    thread_queue.join();
+  std::atomic<int> numKv(0), numHash(0), numZset(0), numQueue(0);
+  {
+    ThreadPool dispatcher(threadnum);
+    if (mode == "nemo") {
+      nemo::Options option;
+      option.write_buffer_size = 268435456; //256M
+      option.target_file_size_base = 20971520; //20M
+      option.max_background_flushes = 4;
+      option.max_background_compactions = 4;
+      nemo::Nemo* db = new nemo::Nemo(path, option);
+      printInfo(NEMO, now, ip, port, path);
+      std::thread thread_kv = std::thread(NemoDoKv, ip, port, password, 
+                                 db, std::ref(dispatcher), std::ref(numKv));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+      std::thread thread_hash = std::thread(NemoDoHash, ip, port, password, 
+                                 db, std::ref(dispatcher), std::ref(numHash)); 
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread thread_zset = std::thread(NemoDoZset, ip, port, password, 
+                                 db, std::ref(dispatcher), std::ref(numZset));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread thread_queue = std::thread(NemoDoQueue, ip, port, password, 
+                                 db, std::ref(dispatcher), std::ref(numQueue));
+      thread_kv.join();
+      thread_hash.join();
+      thread_zset.join();
+      thread_queue.join();
+      delete db;
+    } else if (mode == "blackwidow") {
+      blackwidow::BlackwidowOptions option;
+      blackwidow::BlackWidow* db = new blackwidow::BlackWidow();
+      option.options.create_if_missing = true;
+      db->Open(option, path);
+      printInfo(BLACKWIDOW, now, ip, port, path); 
+      std::thread thread_kv = std::thread(BlackwidowDoKv, ip, port, password, 
+                              db, std::ref(dispatcher), std::ref(numKv));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread thread_hash = std::thread(BlackwidowDoHash, ip, port, password, 
+                              db, std::ref(dispatcher), std::ref(numHash));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread thread_zset = std::thread(BlackwidowDoZset, ip, port, password, 
+                              db, std::ref(dispatcher), std::ref(numZset));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::thread thread_queue = std::thread(BlackwidowDoQueue, ip, port, password, 
+                              db, std::ref(dispatcher), std::ref(numQueue));
+      thread_kv.join();
+      thread_hash.join();
+      thread_zset.join();
+      thread_queue.join();
 
-    delete db;
-  }
-  else {
-    Usage();
-    return -1;
+      delete db;
+    } else {
+      Usage();
+      return -1;
+    }
   }
   std::chrono::system_clock::time_point end_time = std::chrono::system_clock::now();
   now = std::chrono::system_clock::to_time_t(end_time);
+  PrintRes(numKv, numHash, numZset, numQueue);
   std::cout <<   "====================END=======================" << std::endl;
   std::cout << "Finish Time : " << asctime(localtime(&now));  
   auto hours = std::chrono::duration_cast<std::chrono::hours>(end_time - start_time).count();

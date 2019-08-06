@@ -37,7 +37,6 @@ int main(int argc, char** argv) {
     }
     else {
       std::cout << "conneciont error : can't allocate redis context." << std::endl;
-      redisFree(c);
       return -1;
     }
   }
@@ -71,12 +70,12 @@ int main(int argc, char** argv) {
     }
     //std::cout << command << std::endl;
     r = (redisReply*)redisCommand(c, command.c_str());
-    //std::cout << r->str << std::endl;
     if (r) {
       freeReplyObject(r);
     }
   }
   std::cout << "transport finished" << std::endl; 
   redisFree(c);
+  fin.close(); 
   return 0;
 }
