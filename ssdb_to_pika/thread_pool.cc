@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <iostream>
 
-#include "ThreadPool.h"
+#include "thread_pool.h"
 
 ThreadPool::ThreadPool(int initial_size) : m_size(initial_size), m_is_start(false) {
   Start();

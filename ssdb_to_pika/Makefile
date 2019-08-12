@@ -1,6 +1,8 @@
 CXX = g++
 CXXFLAGS = -DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX -DOS_LINUX -Wall -W -DDEBUG -g -O2 -D__XDEBUG__ -fPIC -Wno-unused-function -std=c++11
+
 OBJECT = ssdb_to_pika
+
 SRC_DIR = .
 OUTPUT = .
 
