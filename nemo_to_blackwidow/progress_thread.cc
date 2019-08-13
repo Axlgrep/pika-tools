@@ -32,6 +32,7 @@ void* ProgressThread::ThreadMain() {
     if (is_finish) {
       break;
     }
+    sleep(1);
   }
   slash::MutexLock l(&mutex);
   printf("\nClassify keys finished\n");
