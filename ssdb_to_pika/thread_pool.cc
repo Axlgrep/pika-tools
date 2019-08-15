@@ -1,70 +1,68 @@
 #include <assert.h>
-#include <iostream>
 
 #include "thread_pool.h"
 
-ThreadPool::ThreadPool(int initial_size) : m_size(initial_size), m_is_start(false) {
+ThreadPool::ThreadPool(int initial_size) : worker_size_(initial_size), is_started_(false) {
   Start();
 }
 
 void ThreadPool::Start() {
-  assert(m_workthreads.empty());
-  m_is_start = true;
-  m_workthreads.reserve(m_size);
-  for (int i = 0; i < m_size; ++i) {
-    m_workthreads.emplace_back(new std::thread(std::bind(&ThreadPool::ThreadLoop, this)));
+  assert(workthreads_.empty());
+  is_started_ = true;
+  workthreads_.reserve(worker_size_);
+  for (int i = 0; i < worker_size_; ++i) {
+    workthreads_.emplace_back(new std::thread(std::bind(&ThreadPool::ThreadLoop, this)));
   }
 }
 
 ThreadPool::~ThreadPool() {
-  if (m_is_start) {
+  if (is_started_) {
     Stop();
   }
 }
 
 void ThreadPool::Stop() {
   {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    while (!m_taskque.empty() && m_is_start) {
-      m_cond.wait(lock); 
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (!taskque_.empty() && is_started_) {
+      cond_.wait(lock); 
     }
-    m_is_start = false;
-    m_cond.notify_all();
+    is_started_ = false;
+    cond_.notify_all();
   }
-  for (auto iter = m_workthreads.begin(); iter != m_workthreads.end(); ++iter) {
+  for (auto iter = workthreads_.begin(); iter != workthreads_.end(); ++iter) {
     (*iter)->join();
-    delete *iter;
   }
-  m_workthreads.clear();
+  workthreads_.clear();
 }
 
 void ThreadPool::ThreadLoop() {
-  while (m_is_start) {
-    task_t task = Take();
+  while (is_started_) {
+    Task task = Take();
     if (task) {
       task();
     }
   }
 }
 
-void ThreadPool::AddTask(const task_t& tsk) {
-  std::unique_lock<std::mutex> lock(m_mutex);  
-  m_taskque.emplace_back(std::move(tsk));
-  m_cond.notify_one();
+void ThreadPool::AddTask(const Task& tsk) {
+  std::unique_lock<std::mutex> lock(mutex_);  
+  taskque_.emplace_back(std::move(tsk));
+  cond_.notify_one();
 }
 
-ThreadPool::task_t ThreadPool::Take() {
-  std::unique_lock<std::mutex> lock(m_mutex);
-  while (m_taskque.empty() && m_is_start) {
-    m_cond.wait(lock);
+ThreadPool::Task ThreadPool::Take() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  while (taskque_.empty() && is_started_) {
+    cond_.wait(lock);
   }
-  task_t tsk;
-  TaskQue::size_type size = m_taskque.size();
-  if (!m_taskque.empty() && m_is_start) {
-    tsk = m_taskque.front();
-    m_taskque.pop_front();
-    assert(size - 1 == m_taskque.size());
+  Task task;
+  TaskQue::size_type size = taskque_.size();
+  if (!taskque_.empty() && is_started_) {
+    task = taskque_.front();
+    taskque_.pop_front();
+    assert(size - 1 == taskque_.size());
   }
-  return tsk;
+  return task;
 }
 
