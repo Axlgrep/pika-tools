@@ -190,7 +190,12 @@ Status RunSetCommandPipeline(redisContext* c) {
     for (int32_t batch_idx = 0; batch_idx < pipeline_num; ++batch_idx) {
       std::string key;
       std::string value;
-      GenerateRandomString(10, &key);
+
+      default_random_engine e;
+      e.seed(last_seed);
+      last_seed = e();
+      int32_t rand_num = last_seed % 10 + 1;
+      GenerateRandomString(rand_num, &key);
       GenerateRandomString(payload_size, &value);
 
       argv[1] = key.c_str(); argv_len[1] = key.size();
@@ -227,7 +232,12 @@ Status RunSetCommand(redisContext* c) {
     size_t set_argvlen[3];
     std::string key;
     std::string value;
-    GenerateRandomString(10, &key);
+    default_random_engine e;
+    e.seed(last_seed);
+    last_seed = e();
+    int32_t rand_num = last_seed % 10 + 1;
+
+    GenerateRandomString(rand_num, &key);
     GenerateRandomString(payload_size, &value);
 
     set_argv[0] = "set"; set_argvlen[0] = 3;
