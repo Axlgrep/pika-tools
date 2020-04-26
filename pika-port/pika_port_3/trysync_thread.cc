@@ -425,11 +425,12 @@ void* TrysyncThread::ThreadMain() {
     // Bug Fix by AS on 20190414  22:22 pm:
     // the pika master module name rule is: document_${slave_ip}:master_port
     //
-    // document_${master_ip}:${master_port}
-    // std::string ip_port = slash::IpPortString(master_ip, master_port);
-    //
     // document_${slave_ip}:master_port
-    std::string ip_port = slash::IpPortString(lip, master_port);
+    //std::string ip_port = slash::IpPortString(lip, master_port);
+
+    // pika 3.0.0-3.0.15 uses document_${master_ip}:${master_port}
+    // document_${master_ip}:${master_port}
+    std::string ip_port = slash::IpPortString(master_ip, master_port);
     // We append the master ip port after module name
     // To make sure only data from current master is received
     int rsync_port = g_conf.local_port + 3000;
