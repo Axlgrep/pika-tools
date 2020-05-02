@@ -39,13 +39,12 @@ void RedisSender::ConnectRedis() {
     if (!s.ok()) {
       delete cli_;
       cli_ = NULL;
-      LOG(WARNING) << "RedisSender " << id_ << " Can not connect to "
-        << ip_ << ":" << port_ << ", status: " << s.ToString();
+      LOG(WARNING) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
       sleep(3);
       continue;
     } else {
       // Connect success
-      LOG(INFO) << "RedisSender " << id_ << " Connect to " << ip_ << ":" << port_ << " success";
+      LOG(INFO) << "Connect to " << ip_ << ":" << port_ << " success";
 
       // Authentication
       if (!password_.empty()) {
@@ -60,18 +59,17 @@ void RedisSender::ConnectRedis() {
         if (s.ok()) {
           s = cli_->Recv(&resp);
           if (resp[0] == "OK") {
-            LOG(INFO) << "RedisSender " << id_ << " Authentic success";
+            LOG(INFO) << "Authentic success";
           } else {
             cli_->Close();
+            LOG(WARNING) << "Invalid password";
             cli_ = NULL;
             should_exit_ = true;
-            LOG(WARNING) << "RedisSender " << id_ << " Invalid password";
             return;
           }
         } else {
           cli_->Close();
-          LOG(INFO) << "RedisSender " << id_ << " Recv response error: " << s.ToString();
-          delete cli_;
+          LOG(INFO) << s.ToString();
           cli_ = NULL;
           continue;
         }
@@ -89,15 +87,14 @@ void RedisSender::ConnectRedis() {
           if (s.ok()) {
             if (resp[0] == "NOAUTH Authentication required.") {
               cli_->Close();
-              LOG(WARNING) << "RedisSender " << id_ << " Authentication required";
+              LOG(WARNING) << "Authentication required";
               cli_ = NULL;
               should_exit_ = true;
               return;
             }
           } else {
             cli_->Close();
-            LOG(INFO) << "RedisSender " << id_ << " Recv response error: " << s.ToString();
-            delete cli_;
+            LOG(INFO) << s.ToString();
             cli_ = NULL;
           }
         }
@@ -135,27 +132,11 @@ void RedisSender::SendRedisCommand(const std::string &command) {
 int RedisSender::SendCommand(std::string &command) {
   time_t now = ::time(NULL);
   if (kCheckDiff < now - last_write_time_) {
-    bool alive = true;
-    pink::RedisCmdArgsType argv, resp;
-    std::string ping;
-    argv.push_back("PING");
-    pink::SerializeRedisCommand(argv, &ping);
-    slash::Status s = cli_->Send(&ping);
-    if (s.ok()) {
-      s = cli_->Recv(&resp);
-      if (!s.ok() || resp.size() != 1 || strcasecmp(resp[0].data(), "pong")) {
-        alive = false;
-      }
-    } else {
-      alive = false;
-    }
-
-    if (!alive) {
-      LOG(WARNING) << "RedisSender " << id_ << " Timeout disconnect, try to reconnect";
-      cli_->Close();
-      cli_ = NULL;
+    int ret = cli_->CheckAliveness();
+    if (ret < 0) {
       ConnectRedis();
     }
+    last_write_time_ = now;
   }
 
   // Send command
@@ -163,17 +144,12 @@ int RedisSender::SendCommand(std::string &command) {
   do {
     slash::Status s = cli_->Send(&command);
     if (s.ok()) {
-      s = cli_->Recv(NULL);
-      if (s.ok()) {
-        last_write_time_ = now;
-        return 0;
-      }
+      return 0;
     }
 
-    LOG(WARNING) << "RedisSender " << id_ << " Fails to send redis command "
-      << command << ", times: " << idx + 1 << ", status: " << s.ToString();
+    LOG(WARNING) << "RedisSender " << id_ << "fails to send redis command " << command << ", times: " << idx + 1;
     cli_->Close();
-    delete cli_;
+    LOG(INFO) << s.ToString();
     cli_ = NULL;
     ConnectRedis();
   } while(++idx < 3);
@@ -182,7 +158,10 @@ int RedisSender::SendCommand(std::string &command) {
 }
 
 void *RedisSender::ThreadMain() {
-  LOG(INFO) << "Start RedisSender " << id_ << " Thread...";
+  LOG(INFO) << "Start sender " << id_ << " thread...";
+  // sleep(15);
+  int cnt = 0;
+  int ret = 0;
 
   ConnectRedis();
 
@@ -213,11 +192,24 @@ void *RedisSender::ThreadMain() {
     commands_queue_.pop();
     wsignal_.Signal();
     commands_mutex_.Unlock();
-    SendCommand(command);
+    ret = SendCommand(command);
+    if (ret == 0) {
+      cnt++;
+    }
+
+    if (cnt >= 200) {
+      for(; cnt > 0; cnt--) {
+        cli_->Recv(NULL);
+      }
+    }
   }
+  for(; cnt > 0; cnt--) {
+    cli_->Recv(NULL);
+  }
+
   delete cli_;
   cli_ = NULL;
-  LOG(INFO) << "RedisSender Thread " << id_ << " Complete";
+  LOG(INFO) << "RedisSender thread " << id_ << " complete";
   return NULL;
 }
 

@@ -4,16 +4,16 @@
 #include "pika_sender.h"
 #include "slash/include/xdebug.h"
 
-PikaSender::PikaSender(int id, std::string ip, int64_t port, std::string password):
-  id_(id),
+PikaSender::PikaSender(std::string ip, int64_t port, std::string password):
   cli_(NULL),
   signal_(&keys_mutex_),
   ip_(ip),
   port_(port),
   password_(password),
   should_exit_(false),
-  elements_(0) {
-}
+  elements_(0)
+  {
+  }
 
 PikaSender::~PikaSender() {
 }
@@ -39,14 +39,12 @@ void PikaSender::ConnectRedis() {
     if (!s.ok()) {
       delete cli_;
       cli_ = NULL;
-      LOG(WARNING) << "PikaSender " << id_ << " Can not connect to "
-        << ip_ << ":" << port_ << ", status: " << s.ToString();
+      LOG(WARNING) << "Can not connect to " << ip_ << ":" << port_ << ", status: " << s.ToString();
       sleep(3);
       continue;
     } else {
       // Connect success
-      LOG(INFO)  << "PikaSender " << id_ << " Connect to "
-        << ip_ << ":" << port_ << " success";
+      LOG(INFO) << "Connect to " << ip_ << ":" << port_ << " success";
 
       // Authentication
       if (!password_.empty()) {
@@ -61,17 +59,17 @@ void PikaSender::ConnectRedis() {
         if (s.ok()) {
           s = cli_->Recv(&resp);
           if (resp[0] == "OK") {
-            LOG(INFO) << "PikaSender " << id_ << " Authentic success";
+            LOG(INFO) << "Authentic success";
           } else {
             cli_->Close();
-            LOG(WARNING) << "PikaSender " << id_ << " Invalid password";
+            LOG(WARNING) << "Invalid password";
             cli_ = NULL;
             should_exit_ = true;
             return;
           }
         } else {
           cli_->Close();
-          LOG(INFO) << "PikaSender " << id_ << " Auth faild: " << s.ToString();
+          LOG(INFO) << "auth faild: " << s.ToString();
           cli_ = NULL;
           continue;
         }
@@ -89,7 +87,7 @@ void PikaSender::ConnectRedis() {
           if (s.ok()) {
             if (resp[0] == "NOAUTH Authentication required.") {
               cli_->Close();
-              LOG(WARNING) << "PikaSender " << id_ << " Authentication required";
+              LOG(WARNING) << "Authentication required";
               cli_ = NULL;
               should_exit_ = true;
               return;
@@ -122,32 +120,22 @@ void PikaSender::LoadKey(const std::string &key) {
 }
 
 void PikaSender::SendCommand(std::string &command, const std::string &key) {
-  bool alive = true;
+  // Send command
   slash::Status s = cli_->Send(&command);
-  if (s.ok()) {
-    s = cli_->Recv(NULL);
-    if (s.ok()) {
-      return;
-    } else {
-      alive = false;
-    }
-  } else {
-    alive = false;
-  }
-
-  if (!alive) {
-    LOG(WARNING) << "PikaSender " << id_ << " Timeout disconnect, try to reconnect";
+  if (!s.ok()) {
     elements_--;
-    LoadKey(key);  // send command failed, reload the command
+    LoadKey(key);
     cli_->Close();
-    delete cli_;
+    LOG(INFO) << s.ToString();
     cli_ = NULL;
     ConnectRedis();
   }
 }
 
 void *PikaSender::ThreadMain() {
-  LOG(INFO) << "Start PikaSender " << id_ << " Thread...";
+  LOG(INFO) << "Start sender thread...";
+  int cnt = 0;
+
   if (cli_ == NULL) {
     ConnectRedis();
   }
@@ -161,6 +149,7 @@ void *PikaSender::ThreadMain() {
     }
     keys_mutex_.Unlock();
     if (QueueSize() == 0 && should_exit_) {
+    // if (should_exit_) {
       return NULL;
     }
 
@@ -169,12 +158,22 @@ void *PikaSender::ThreadMain() {
     elements_++;
     keys_queue_.pop();
     keys_mutex_.Unlock();
+
     SendCommand(key, key);
+    cnt++;
+    if (cnt >= 200) {
+      for(; cnt > 0; cnt--) {
+        cli_->Recv(NULL);
+      }
+    }
+  }
+  for(; cnt > 0; cnt--) {
+    cli_->Recv(NULL);
   }
 
   delete cli_;
   cli_ = NULL;
-  LOG(INFO) << "PikaSender Thread " << id_ << " Complete";
+  LOG(INFO) << "PikaSender thread complete";
   return NULL;
 }
 
