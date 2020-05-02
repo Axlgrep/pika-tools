@@ -35,6 +35,7 @@ private:
   int port_;
   std::string password_;
   std::atomic<bool> should_exit_;
+  int32_t cnt_;
   int64_t elements_;
   
   virtual void *ThreadMain();

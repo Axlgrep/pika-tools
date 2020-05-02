@@ -37,6 +37,7 @@ class RedisSender : public pink::Thread {
   int port_;
   std::string password_;
   bool should_exit_;
+  int32_t cnt_;
   int64_t elements_;
   std::atomic<time_t> last_write_time_;
 

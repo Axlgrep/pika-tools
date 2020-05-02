@@ -19,6 +19,7 @@ RedisSender::RedisSender(int id, std::string ip, int64_t port, std::string passw
   port_(port),
   password_(password),
   should_exit_(false),
+  cnt_(0),
   elements_(0) {
 
   last_write_time_ = ::time(NULL);
@@ -148,7 +149,9 @@ int RedisSender::SendCommand(std::string &command) {
     }
 
     LOG(WARNING) << "RedisSender " << id_ << "fails to send redis command " << command << ", times: " << idx + 1;
+    cnt_ = 0;
     cli_->Close();
+    delete cli_;
     LOG(INFO) << s.ToString();
     cli_ = NULL;
     ConnectRedis();
@@ -194,16 +197,16 @@ void *RedisSender::ThreadMain() {
     commands_mutex_.Unlock();
     ret = SendCommand(command);
     if (ret == 0) {
-      cnt++;
+      cnt_++;
     }
 
-    if (cnt >= 200) {
-      for(; cnt > 0; cnt--) {
+    if (cnt_ >= 200) {
+      for(; cnt_ > 0; cnt--) {
         cli_->Recv(NULL);
       }
     }
   }
-  for(; cnt > 0; cnt--) {
+  for(; cnt_ > 0; cnt_--) {
     cli_->Recv(NULL);
   }
 

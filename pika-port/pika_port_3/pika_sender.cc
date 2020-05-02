@@ -11,6 +11,7 @@ PikaSender::PikaSender(std::string ip, int64_t port, std::string password):
   port_(port),
   password_(password),
   should_exit_(false),
+  cnt_(0),
   elements_(0)
   {
   }
@@ -125,8 +126,10 @@ void PikaSender::SendCommand(std::string &command, const std::string &key) {
   if (!s.ok()) {
     elements_--;
     LoadKey(key);
+    cnt_ = 0;
     cli_->Close();
     LOG(INFO) << s.ToString();
+    delete cli_;
     cli_ = NULL;
     ConnectRedis();
   }
@@ -134,7 +137,6 @@ void PikaSender::SendCommand(std::string &command, const std::string &key) {
 
 void *PikaSender::ThreadMain() {
   LOG(INFO) << "Start sender thread...";
-  int cnt = 0;
 
   if (cli_ == NULL) {
     ConnectRedis();
@@ -160,17 +162,18 @@ void *PikaSender::ThreadMain() {
     keys_mutex_.Unlock();
 
     SendCommand(key, key);
-    cnt++;
-    if (cnt >= 200) {
-      for(; cnt > 0; cnt--) {
+    cnt_++;
+    if (cnt_ >= 200) {
+      for(; cnt_ > 0; cnt_--) {
         cli_->Recv(NULL);
       }
     }
   }
-  for(; cnt > 0; cnt--) {
+  for(; cnt_ > 0; cnt_--) {
     cli_->Recv(NULL);
   }
 
+  cli_->Close();
   delete cli_;
   cli_ = NULL;
   LOG(INFO) << "PikaSender thread complete";
