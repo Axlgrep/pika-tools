@@ -37,6 +37,7 @@ void RedisSender::ConnectRedis() {
     cli_->set_send_timeout(10000);
     slash::Status s = cli_->Connect(ip_, port_);
     if (!s.ok()) {
+      delete cli_;
       cli_ = NULL;
       LOG(WARNING) << "RedisSender " << id_ << " Can not connect to "
         << ip_ << ":" << port_ << ", status: " << s.ToString();

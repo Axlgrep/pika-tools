@@ -25,6 +25,7 @@ void PikaSender::ConnectRedis() {
     cli_->set_connect_timeout(1000);
     slash::Status s = cli_->Connect(ip_, port_);
     if (!s.ok()) {
+      delete cli_;
       cli_ = NULL;
       log_info("Can not connect to %s:%d: %s", ip_.data(), port_, s.ToString().data());
       continue;
