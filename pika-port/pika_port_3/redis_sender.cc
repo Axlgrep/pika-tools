@@ -163,7 +163,6 @@ int RedisSender::SendCommand(std::string &command) {
 void *RedisSender::ThreadMain() {
   LOG(INFO) << "Start sender " << id_ << " thread...";
   // sleep(15);
-  int cnt = 0;
   int ret = 0;
 
   ConnectRedis();
@@ -201,7 +200,7 @@ void *RedisSender::ThreadMain() {
     }
 
     if (cnt_ >= 200) {
-      for(; cnt_ > 0; cnt--) {
+      for(; cnt_ > 0; cnt_--) {
         cli_->Recv(NULL);
       }
     }
