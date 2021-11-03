@@ -22,6 +22,8 @@ sudo yum install -y snappy snappy-devel
 sudo yum install -y zlib zlib-devel
 sudo yum install -y bzip2 bzip2-devel
 sudo yum install -y lz4-devel
+sudo yum install -y libzstd-devel
+sudo yum install -y libstdc++-static
 
 # download third libs
 # pls wait for about 30 minutes
@@ -31,4 +33,5 @@ git submodule update --init --recursive --force
 cd pika_port_3
 make
 export LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
+export LD_LIBRARY_PATH=/usr/lib64:${LD_LIBRARY_PATH}
 ./pika_port
